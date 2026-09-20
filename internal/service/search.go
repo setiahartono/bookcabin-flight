@@ -83,7 +83,7 @@ func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (Se
 
 	departureDate, err := time.Parse(time.DateOnly, criteria.DepartureDate)
 	if err != nil {
-		return SearchResult{}, fmt.Errorf("%w: departure_date %q", ErrInvalidCriteria, criteria.DepartureDate)
+		return SearchResult{}, fmt.Errorf("%w: departureDate %q", ErrInvalidCriteria, criteria.DepartureDate)
 	}
 
 	flights, aggregateErr := s.aggregator.Aggregate(ctx, provider.SearchRequest{

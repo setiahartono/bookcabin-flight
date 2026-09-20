@@ -28,7 +28,7 @@ A simple API to simulate aggregation of flight data from various providers by mo
    │                      decode criteria · render JSON · {"error": "..."} when it fails
    ▼
  service.SearchService.Search                                    (internal/service)
-   │                      validate departure_date · build metadata
+   │                      validate departureDate · build metadata
    ▼
  aggregator.Aggregator.Aggregate                                 (internal/aggregator)
    │                      one goroutine per provider, errors joined
@@ -66,7 +66,7 @@ sequenceDiagram
 
     C->>H: POST /api/v1/search {"origin":"CGK","destination":"DPS",...}
     H->>S: Search(ctx, criteria)
-    S->>S: parse departure_date (ErrInvalidCriteria on failure)
+    S->>S: parse departureDate (ErrInvalidCriteria on failure)
     S->>A: Aggregate(ctx, SearchRequest)
     par one goroutine per provider
         A->>P: Search(ctx, req) — wait 50–400ms, then maybe fail
@@ -80,7 +80,7 @@ sequenceDiagram
     S->>S: scoring.Rank(matching flights)
     S-->>H: SearchResult{search_criteria, metadata, flights}
     alt invalid criteria
-        H-->>C: 400 {"error":"invalid search criteria: departure_date \"\""}
+        H-->>C: 400 {"error":"invalid search criteria: departureDate \"\""}
     else search ok
         H-->>C: 200 {search_criteria, metadata, flights}
     end
@@ -146,12 +146,30 @@ go test ./...               # run the tests
 | GET | `/api/v1/ping` | – |
 | POST | `/api/v1/search` | search criteria JSON |
 
+### Request
+
+The body of `POST /api/v1/search` is camelCase:
+
+| Field | Type | |
+|---|---|---|
+| `origin` | string | departure airport code, e.g. `CGK` |
+| `destination` | string | arrival airport code, e.g. `DPS` |
+| `departureDate` | string | date of the trip, `YYYY-MM-DD`, mandatory |
+| `passengers` | int | travellers to seat |
+| `cabinClass` | string | e.g. `economy`, matched case insensitively |
+| `roundTrip` | bool, optional | accepted for the round trip search, which is not searched yet |
+
+The response keeps snake_case: `search_criteria` reports `departure_date` and `cabin_class`, and
+it never echoes `roundTrip`. Snake_case request keys are no longer read, so a body written with
+`departure_date` is answered with `400 invalid search criteria: departureDate ""`, which names the
+key the endpoint reads.
+
 ```bash
 curl -s localhost:8080/api/v1/ping
 
 curl -s -X POST localhost:8080/api/v1/search \
   -H 'Content-Type: application/json' \
-  -d '{"origin":"CGK","destination":"DPS","departure_date":"2025-12-15","passengers":1,"cabin_class":"economy"}'
+  -d '{"origin":"CGK","destination":"DPS","departureDate":"2025-12-15","passengers":1,"cabinClass":"economy"}'
 ```
 
 A search answers with the criteria it applied, the run metadata and the unified flights, best
@@ -185,4 +203,4 @@ come back and `providers_failed` reports it.
 ```
 
 Errors are JSON as well, `{"error": "<message>"}`: `400` for an unreadable body or invalid criteria
-(for example a missing or malformed `departure_date`), `500` for anything unexpected.
+(for example a missing or malformed `departureDate`), `500` for anything unexpected.

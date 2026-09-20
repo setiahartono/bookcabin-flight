@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -9,12 +10,39 @@ import (
 	"bookcabin-flight/internal/service"
 )
 
-type SearchHandler struct {
-	search *service.SearchService
+// Searcher is the search service the handler calls.
+type Searcher interface {
+	Search(ctx context.Context, criteria service.SearchCriteria) (service.SearchResult, error)
 }
 
-func NewSearchHandler(search *service.SearchService) *SearchHandler {
+type SearchHandler struct {
+	search Searcher
+}
+
+func NewSearchHandler(search Searcher) *SearchHandler {
 	return &SearchHandler{search: search}
+}
+
+// searchRequest is the camelCase body the search endpoint accepts. The criteria
+// the handler works with keep the snake_case shape a response reports.
+type searchRequest struct {
+	Origin        string `json:"origin"`
+	Destination   string `json:"destination"`
+	DepartureDate string `json:"departureDate"`
+	Passengers    int    `json:"passengers"`
+	CabinClass    string `json:"cabinClass"`
+	RoundTrip     *bool  `json:"roundTrip"`
+}
+
+func (r searchRequest) criteria() service.SearchCriteria {
+	return service.SearchCriteria{
+		Origin:        r.Origin,
+		Destination:   r.Destination,
+		DepartureDate: r.DepartureDate,
+		Passengers:    r.Passengers,
+		CabinClass:    r.CabinClass,
+		RoundTrip:     r.RoundTrip,
+	}
 }
 
 type errorBody struct {
@@ -36,27 +64,14 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var criteria service.SearchCriteria
-	if err := json.Unmarshal(body, &criteria); err != nil {
+	var request searchRequest
+	if err := json.Unmarshal(body, &request); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 
 		return
 	}
 
-	var camelCase struct {
-		DepartureDate string `json:"departureDate"`
-		CabinClass    string `json:"cabinClass"`
-	}
-	_ = json.Unmarshal(body, &camelCase)
-
-	if criteria.DepartureDate == "" {
-		criteria.DepartureDate = camelCase.DepartureDate
-	}
-	if criteria.CabinClass == "" {
-		criteria.CabinClass = camelCase.CabinClass
-	}
-
-	result, err := h.search.Search(r.Context(), criteria)
+	result, err := h.search.Search(r.Context(), request.criteria())
 
 	switch {
 	case errors.Is(err, service.ErrInvalidCriteria):
