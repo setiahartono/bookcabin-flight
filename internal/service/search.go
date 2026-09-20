@@ -9,6 +9,7 @@ import (
 	"bookcabin-flight/internal/aggregator"
 	"bookcabin-flight/internal/filter"
 	"bookcabin-flight/internal/provider"
+	"bookcabin-flight/internal/scoring"
 )
 
 var ErrInvalidCriteria = errors.New("invalid search criteria")
@@ -16,9 +17,9 @@ var ErrInvalidCriteria = errors.New("invalid search criteria")
 type SearchCriteria = filter.SearchCriteria
 
 type SearchResult struct {
-	SearchCriteria SearchCriteria        `json:"search_criteria"`
-	Metadata       metadata              `json:"metadata"`
-	Flights        []provider.FlightData `json:"flights"`
+	SearchCriteria SearchCriteria         `json:"search_criteria"`
+	Metadata       metadata               `json:"metadata"`
+	Flights        []scoring.ScoredFlight `json:"flights"`
 }
 
 type metadata struct {
@@ -90,13 +91,16 @@ func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (Se
 		CabinClass:    criteria.CabinClass,
 	})
 
-	flights = filter.FilterFlights(flights, criteria)
+	// Only the flights that match the criteria take part in the scoring, and the
+	// result lists them best value first.
+	filtered := filter.FilterFlights(flights, criteria)
+	ranked := scoring.Rank(filtered)
 
 	result := SearchResult{
 		SearchCriteria: criteria,
-		Flights:        flights,
+		Flights:        ranked,
 		Metadata: metadata{
-			TotalResults:     len(flights),
+			TotalResults:     len(ranked),
 			ProvidersQueried: s.aggregator.Count(),
 			ProvidersFailed:  failureCount(aggregateErr),
 			SearchTimeMs:     int(time.Since(start).Milliseconds()),

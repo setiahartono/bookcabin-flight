@@ -29,14 +29,9 @@ func (a *Aggregator) Count() int {
 	return len(a.searchers)
 }
 
-// Aggregate queries every searcher in parallel and returns the flights they
-// answered with. A searcher that fails does not hide the others: its error is
-// joined into the returned error while the flights of the searchers that
-// answered are still returned.
-//
-// Each searcher writes to its own slot of the result, so the returned flights
-// follow the order the searchers were given to New and stay stable between
-// calls, no matter which provider answers first.
+// Aggregate queries every searcher in parallel and returns the flights they answered with.
+// Provider failing doesn't compromise the aggregation process
+// Provider that successfully answered will be aggregated
 func (a *Aggregator) Aggregate(ctx context.Context, req provider.SearchRequest) ([]provider.FlightData, error) {
 	var (
 		wg    sync.WaitGroup

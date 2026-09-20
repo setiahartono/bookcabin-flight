@@ -1,0 +1,123 @@
+// Package scoring rates the flights of an already filtered search result by
+// best value: how much of the cheapest fare is paid for how convenient the
+// itinerary is.
+package scoring
+
+import (
+	"math"
+	"sort"
+
+	"bookcabin-flight/internal/provider"
+)
+
+// Weights of the best value score. The fare dominates, convenience decides
+// between the flights that cost about the same.
+// PriceWeight+ConvenienceWeight and DurationWeight+StopsWeight each add up to 1.
+const (
+	PriceWeight       = 0.7
+	ConvenienceWeight = 0.3
+
+	DurationWeight = 0.6
+	StopsWeight    = 0.4
+)
+
+// Score is the best value of a flight inside the subset it was scored in,
+// between 0 (worst) and 1 (the best value that subset offers).
+// Value is the weighted sum of the Price and Convenience components, both
+// rounded to three decimals, so Value can be recomputed from them.
+type Score struct {
+	Value       float64 `json:"value"`
+	Price       float64 `json:"price"`
+	Convenience float64 `json:"convenience"`
+}
+
+// ScoredFlight is a flight together with the score it earned in the subset.
+// The flight fields stay at the top level of the JSON, next to Score.
+type ScoredFlight struct {
+	provider.FlightData
+	Score Score `json:"score"`
+}
+
+// Rank scores the flights of the subset and returns them best value first, so
+// the first flight of a search result is its best value.
+//
+// Every flight is compared to the best the subset offers: the cheapest fare, and
+// the quickest itinerary with the fewest stops. The cheapest flight scores 1 on
+// price and a flight costing twice as much scores 0.5; travel time is scored the
+// same way, while every stop takes a share off the stops component. A price or a
+// travel time a provider could not normalize (zero) earns no credit for that
+// component, while the stops of the itinerary always count.
+// Flights that score the same keep the order they were given in.
+func Rank(flights []provider.FlightData) []ScoredFlight {
+	cheapest, quickest := reference(flights)
+
+	ranked := make([]ScoredFlight, 0, len(flights))
+	for _, flight := range flights {
+		ranked = append(ranked, ScoredFlight{
+			FlightData: flight,
+			Score:      score(flight, cheapest, quickest),
+		})
+	}
+
+	sort.SliceStable(ranked, func(i, j int) bool {
+		return ranked[i].Score.Value > ranked[j].Score.Value
+	})
+
+	return ranked
+}
+
+// reference returns the cheapest fare and the shortest travel time of the
+// subset, ignoring the flights whose price or travel time is unknown.
+func reference(flights []provider.FlightData) (cheapest, quickest int) {
+	for _, flight := range flights {
+		cheapest = smallestPositive(cheapest, flight.Price.Amount)
+		quickest = smallestPositive(quickest, flight.Duration.TotalMinutes)
+	}
+
+	return cheapest, quickest
+}
+
+// smallestPositive returns the smaller of the two values, where zero means
+// unknown and never wins over a known value.
+func smallestPositive(best, value int) int {
+	if value <= 0 || (best > 0 && best <= value) {
+		return best
+	}
+
+	return value
+}
+
+func score(flight provider.FlightData, cheapest, quickest int) Score {
+	price := ratio(flight.Price.Amount, cheapest)
+	convenience := round(DurationWeight*ratio(flight.Duration.TotalMinutes, quickest) + StopsWeight*stops(flight.Stops))
+
+	return Score{
+		Value:       round(PriceWeight*price + ConvenienceWeight*convenience),
+		Price:       price,
+		Convenience: convenience,
+	}
+}
+
+// ratio compares a value to the best of the subset: the best scores 1 and twice
+// the best scores 0.5. An unknown value scores 0.
+func ratio(value, best int) float64 {
+	if value <= 0 || best <= 0 {
+		return 0
+	}
+
+	return round(float64(best) / float64(value))
+}
+
+// stops takes the component down for every stop on the itinerary.
+func stops(count int) float64 {
+	if count < 0 {
+		count = 0
+	}
+
+	return 1 / float64(1+count)
+}
+
+// round keeps the scores at three decimals so they stay readable in a response.
+func round(value float64) float64 {
+	return math.Round(value*1000) / 1000
+}

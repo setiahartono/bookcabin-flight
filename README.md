@@ -14,6 +14,7 @@ A simple API to simulate aggregation of flight data from various providers by mo
 - Each provider will normalize the response body received to an uniformed format
 - The normalized responses of the providers are collected in the aggregation layer
 - The aggregated data will then be filtered based on search criteria
+- The filtered flights are scored by best value, from the fare and how convenient the itinerary is
 - The final data is then passed from the Search Service to the handler
 - The handler renders the response body in a JSON format
 
@@ -41,6 +42,9 @@ A simple API to simulate aggregation of flight data from various providers by mo
    ▼
  filter.FilterFlights(flights, criteria)                         (internal/filter)
    │        origin · destination · departure_date · passengers · cabin_class
+   ▼
+ scoring.Rank(filtered)                                          (internal/scoring)
+   │        best value first: 0.7 · price + 0.3 · convenience
    ▼
  SearchResult{ search_criteria, metadata, flights }
    │
@@ -73,6 +77,7 @@ sequenceDiagram
     A-->>S: flights + joined errors
     S->>F: FilterFlights(flights, criteria)
     F-->>S: matching flights
+    S->>S: scoring.Rank(matching flights)
     S-->>H: SearchResult{search_criteria, metadata, flights}
     alt invalid criteria
         H-->>C: 400 {"error":"invalid search criteria: departure_date \"\""}
@@ -92,6 +97,29 @@ sequenceDiagram
 
 Because the providers are queried in parallel, a search takes about as long as the slowest one
 (Batik Air, up to 400 ms) rather than the sum of all four.
+
+### Best Value Scoring
+
+The flights that survive the filter are scored by best value in
+[`internal/scoring`](internal/scoring), and the result lists them best value first, so
+`flights[0]` is the flight to recommend. Every flight is compared to the best the subset
+offers: the cheapest fare, and the quickest itinerary with the fewest stops.
+
+```text
+value       = 0.7 · price       + 0.3 · convenience
+price       = cheapest fare / fare      → 1 for the cheapest, 0.5 when it costs twice as much
+convenience = 0.6 · travel time + 0.4 · stops
+travel time = shortest trip / trip      → 1 for the quickest
+stops       = 1 / (1 + stops)           → 1 direct, 0.5 with a stop, 0.333 with two
+```
+
+Each flight carries the outcome in `score`, rounded to three decimals, and `score.value` is
+the weighted sum of `score.price` and `score.convenience`. A fare or a travel time a provider
+could not normalize (zero) earns no credit for that component, while the stops always count.
+Flights that score the same keep the order the providers answered in.
+
+The sample response below shows why the fare alone does not decide: the 485000 fare takes
+4h 20m with a stop, so the best value is a 595000 non-stop that arrives in 1h 40m.
 
 ## What's Included
 - The API
@@ -125,29 +153,31 @@ curl -s -X POST localhost:8080/api/v1/search \
   -d '{"origin":"CGK","destination":"DPS","departure_date":"2025-12-15","passengers":1,"cabin_class":"economy"}'
 ```
 
-A search answers with the criteria it applied, the run metadata and the unified flights. The sample below
-had one provider fail: the flights of the other three still come back and `providers_failed` reports it.
+A search answers with the criteria it applied, the run metadata and the unified flights, best
+value first. This run had no provider fail; when one does, the flights of the other three still
+come back and `providers_failed` reports it.
 
 ```json
 {
   "search_criteria": {"origin": "CGK", "destination": "DPS", "departure_date": "2025-12-15", "passengers": 1, "cabin_class": "economy"},
-  "metadata": {"total_results": 5, "providers_queried": 4, "providers_failed": 1, "search_time_ms": 274, "cache_hit": false},
+  "metadata": {"total_results": 9, "providers_queried": 4, "providers_failed": 0, "search_time_ms": 209, "cache_hit": false},
   "flights": [
     {
-      "id": "JT740_Lion Air",
-      "provider": "Lion Air",
-      "airline": {"name": "Lion Air", "code": "JT"},
-      "flight_number": "JT740",
-      "departure": {"airport": "CGK", "city": "Jakarta", "datetime": "2025-12-15T05:30:00", "timestamp": 1765751400},
-      "arrival": {"airport": "DPS", "city": "Denpasar", "datetime": "2025-12-15T08:15:00", "timestamp": 1765757700},
-      "duration": {"total_minutes": 105, "formatted": "1h 45m"},
+      "id": "QZ532_AirAsia",
+      "provider": "AirAsia",
+      "airline": {"name": "AirAsia", "code": "QZ"},
+      "flight_number": "QZ532",
+      "departure": {"airport": "CGK", "city": "Jakarta", "datetime": "2025-12-15T19:30:00+07:00", "timestamp": 1765801800},
+      "arrival": {"airport": "DPS", "city": "Denpasar", "datetime": "2025-12-15T22:10:00+08:00", "timestamp": 1765807800},
+      "duration": {"total_minutes": 100, "formatted": "1h 40m"},
       "stops": 0,
-      "price": {"amount": 950000, "currency": "IDR"},
-      "available_seats": 45,
-      "cabin_class": "ECONOMY",
-      "aircraft": "Boeing 737-900ER",
+      "price": {"amount": 595000, "currency": "IDR"},
+      "available_seats": 72,
+      "cabin_class": "economy",
+      "aircraft": null,
       "amenities": [],
-      "baggage": {"carry_on": "7 kg", "checked": "20 kg"}
+      "baggage": {"carry_on": "Cabin baggage only", "checked": "additional fee"},
+      "score": {"value": 0.87, "price": 0.815, "convenience": 1}
     }
   ]
 }
