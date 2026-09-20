@@ -17,6 +17,17 @@ type FlightData struct {
 	Aircraft       *string  `json:"aircraft"`
 	Amenities      []string `json:"amenities"`
 	Baggage        baggage  `json:"baggage"`
+	Score          Score    `json:"score"`
+}
+
+// Score is the best value of a flight inside the subset it was scored in,
+// between 0 (worst) and 1 (the best value that subset offers).
+// Value is the weighted sum of the Price and Convenience components, both
+// rounded to three decimals, so Value can be recomputed from them.
+type Score struct {
+	Value       float64 `json:"value"`
+	Price       float64 `json:"price"`
+	Convenience float64 `json:"convenience"`
 }
 
 type airline struct {

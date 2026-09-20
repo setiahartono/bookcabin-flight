@@ -37,7 +37,7 @@ func almost(t *testing.T, name string, got, want float64) {
 	}
 }
 
-func ids(ranked []ScoredFlight) []string {
+func ids(ranked []provider.FlightData) []string {
 	got := make([]string, 0, len(ranked))
 
 	for _, flight := range ranked {
@@ -199,7 +199,7 @@ func TestRankScoresStayBetweenZeroAndOne(t *testing.T) {
 	}
 }
 
-func TestScoredFlightCarriesTheScoreBesideTheFlight(t *testing.T) {
+func TestRankPutsTheScoreOnTheFlight(t *testing.T) {
 	got := Rank([]provider.FlightData{newFlight(t, "QZ520_AirAsia", 650000, 100, 0)})
 
 	body, err := json.Marshal(got[0])
@@ -208,8 +208,8 @@ func TestScoredFlightCarriesTheScoreBesideTheFlight(t *testing.T) {
 	}
 
 	var decoded struct {
-		Id    string `json:"id"`
-		Score Score  `json:"score"`
+		Id    string         `json:"id"`
+		Score provider.Score `json:"score"`
 	}
 
 	if err := json.Unmarshal(body, &decoded); err != nil {

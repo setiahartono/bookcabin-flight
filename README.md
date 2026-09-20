@@ -113,10 +113,11 @@ travel time = shortest trip / trip      → 1 for the quickest
 stops       = 1 / (1 + stops)           → 1 direct, 0.5 with a stop, 0.333 with two
 ```
 
-Each flight carries the outcome in `score`, rounded to three decimals, and `score.value` is
-the weighted sum of `score.price` and `score.convenience`. A fare or a travel time a provider
-could not normalize (zero) earns no credit for that component, while the stops always count.
-Flights that score the same keep the order the providers answered in.
+Each flight carries the outcome in `score` (`provider.Score`, merged into
+`provider.FlightData`), rounded to three decimals, and `score.value` is the weighted sum of
+`score.price` and `score.convenience`. A fare or a travel time a provider could not normalize
+(zero) earns no credit for that component, while the stops always count. Flights that score the
+same keep the order the providers answered in.
 
 The sample response below shows why the fare alone does not decide: the 485000 fare takes
 4h 20m with a stop, so the best value is a 595000 non-stop that arrives in 1h 40m.
@@ -160,7 +161,7 @@ come back and `providers_failed` reports it.
 ```json
 {
   "search_criteria": {"origin": "CGK", "destination": "DPS", "departure_date": "2025-12-15", "passengers": 1, "cabin_class": "economy"},
-  "metadata": {"total_results": 9, "providers_queried": 4, "providers_failed": 0, "search_time_ms": 209, "cache_hit": false},
+  "metadata": {"total_results": 9, "providers_queried": 4, "providers_failed": 0, "search_time_ms": 288, "cache_hit": false},
   "flights": [
     {
       "id": "QZ532_AirAsia",

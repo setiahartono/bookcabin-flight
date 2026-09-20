@@ -17,9 +17,9 @@ var ErrInvalidCriteria = errors.New("invalid search criteria")
 type SearchCriteria = filter.SearchCriteria
 
 type SearchResult struct {
-	SearchCriteria SearchCriteria         `json:"search_criteria"`
-	Metadata       metadata               `json:"metadata"`
-	Flights        []scoring.ScoredFlight `json:"flights"`
+	SearchCriteria SearchCriteria        `json:"search_criteria"`
+	Metadata       metadata              `json:"metadata"`
+	Flights        []provider.FlightData `json:"flights"`
 }
 
 type metadata struct {
@@ -54,11 +54,14 @@ func loadProviders() []aggregator.Searcher {
 }
 
 func NewSearchService() *SearchService {
-	searchers := loadProviders()
+	return newService(loadProviders()...)
+}
 
-	agg := aggregator.New(searchers...)
+// newService wires the aggregator over the given searchers, which lets the
+// service tests query providers of their own.
+func newService(searchers ...aggregator.Searcher) *SearchService {
 	return &SearchService{
-		aggregator: agg,
+		aggregator: aggregator.New(searchers...),
 	}
 }
 

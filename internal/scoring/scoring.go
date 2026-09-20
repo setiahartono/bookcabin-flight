@@ -21,23 +21,6 @@ const (
 	StopsWeight    = 0.4
 )
 
-// Score is the best value of a flight inside the subset it was scored in,
-// between 0 (worst) and 1 (the best value that subset offers).
-// Value is the weighted sum of the Price and Convenience components, both
-// rounded to three decimals, so Value can be recomputed from them.
-type Score struct {
-	Value       float64 `json:"value"`
-	Price       float64 `json:"price"`
-	Convenience float64 `json:"convenience"`
-}
-
-// ScoredFlight is a flight together with the score it earned in the subset.
-// The flight fields stay at the top level of the JSON, next to Score.
-type ScoredFlight struct {
-	provider.FlightData
-	Score Score `json:"score"`
-}
-
 // Rank scores the flights of the subset and returns them best value first, so
 // the first flight of a search result is its best value.
 //
@@ -48,15 +31,14 @@ type ScoredFlight struct {
 // travel time a provider could not normalize (zero) earns no credit for that
 // component, while the stops of the itinerary always count.
 // Flights that score the same keep the order they were given in.
-func Rank(flights []provider.FlightData) []ScoredFlight {
+func Rank(flights []provider.FlightData) []provider.FlightData {
 	cheapest, quickest := reference(flights)
 
-	ranked := make([]ScoredFlight, 0, len(flights))
+	ranked := make([]provider.FlightData, 0, len(flights))
 	for _, flight := range flights {
-		ranked = append(ranked, ScoredFlight{
-			FlightData: flight,
-			Score:      score(flight, cheapest, quickest),
-		})
+		flight.Score = score(flight, cheapest, quickest)
+
+		ranked = append(ranked, flight)
 	}
 
 	sort.SliceStable(ranked, func(i, j int) bool {
@@ -87,11 +69,11 @@ func smallestPositive(best, value int) int {
 	return value
 }
 
-func score(flight provider.FlightData, cheapest, quickest int) Score {
+func score(flight provider.FlightData, cheapest, quickest int) provider.Score {
 	price := ratio(flight.Price.Amount, cheapest)
 	convenience := round(DurationWeight*ratio(flight.Duration.TotalMinutes, quickest) + StopsWeight*stops(flight.Stops))
 
-	return Score{
+	return provider.Score{
 		Value:       round(PriceWeight*price + ConvenienceWeight*convenience),
 		Price:       price,
 		Convenience: convenience,
