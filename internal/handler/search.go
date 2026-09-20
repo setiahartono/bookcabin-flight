@@ -17,17 +17,28 @@ func NewSearchHandler(search *service.SearchService) *SearchHandler {
 	return &SearchHandler{search: search}
 }
 
+type errorBody struct {
+	Error string `json:"error"`
+}
+
+func writeError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+
+	_ = json.NewEncoder(w).Encode(errorBody{Error: message})
+}
+
 func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request body")
 
 		return
 	}
 
 	var criteria service.SearchCriteria
 	if err := json.Unmarshal(body, &criteria); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, "invalid request body")
 
 		return
 	}
@@ -49,11 +60,11 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case errors.Is(err, service.ErrInvalidCriteria):
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeError(w, http.StatusBadRequest, err.Error())
 
 		return
 	case err != nil:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, http.StatusInternalServerError, err.Error())
 
 		return
 	}

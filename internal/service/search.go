@@ -7,23 +7,18 @@ import (
 	"time"
 
 	"bookcabin-flight/internal/aggregator"
+	"bookcabin-flight/internal/filter"
 	"bookcabin-flight/internal/provider"
 )
 
 var ErrInvalidCriteria = errors.New("invalid search criteria")
 
+type SearchCriteria = filter.SearchCriteria
+
 type SearchResult struct {
 	SearchCriteria SearchCriteria        `json:"search_criteria"`
 	Metadata       metadata              `json:"metadata"`
 	Flights        []provider.FlightData `json:"flights"`
-}
-
-type SearchCriteria struct {
-	Origin        string `json:"origin"`
-	Destination   string `json:"destination"`
-	DepartureDate string `json:"departure_date"`
-	Passengers    int    `json:"passengers"`
-	CabinClass    string `json:"cabin_class"`
 }
 
 type metadata struct {
@@ -95,9 +90,7 @@ func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (Se
 		CabinClass:    criteria.CabinClass,
 	})
 
-	if flights == nil {
-		flights = make([]provider.FlightData, 0)
-	}
+	flights = filter.FilterFlights(flights, criteria)
 
 	result := SearchResult{
 		SearchCriteria: criteria,
