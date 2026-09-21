@@ -33,6 +33,7 @@ type searchRequest struct {
 	Passengers    int    `json:"passengers"`
 	CabinClass    string `json:"cabinClass"`
 	RoundTrip     *bool  `json:"roundTrip"`
+	SortBy        string `json:"sortBy"`
 }
 
 func (r searchRequest) criteria() service.SearchCriteria {
@@ -44,6 +45,7 @@ func (r searchRequest) criteria() service.SearchCriteria {
 		Passengers:    r.Passengers,
 		CabinClass:    r.CabinClass,
 		RoundTrip:     r.RoundTrip,
+		SortBy:        r.SortBy,
 	}
 }
 

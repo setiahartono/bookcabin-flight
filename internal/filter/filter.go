@@ -14,6 +14,7 @@ type SearchCriteria struct {
 	CabinClass    string `json:"cabin_class"`
 	RoundTrip     *bool  `json:"round_trip"`
 	ReturnDate    string `json:"return_date"`
+	SortBy        string `json:"sort_by"`
 }
 
 func FilterFlights(flights []provider.FlightData, criteria SearchCriteria) []provider.FlightData {

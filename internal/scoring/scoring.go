@@ -6,6 +6,7 @@ package scoring
 import (
 	"math"
 	"sort"
+	"strings"
 
 	"bookcabin-flight/internal/provider"
 )
@@ -21,8 +22,43 @@ const (
 	StopsWeight    = 0.4
 )
 
-// Rank scores the flights of the subset and returns them best value first, so
-// the first flight of a search result is its best value.
+// SortKey names the score component a search result is ordered by. Every flight
+// is scored on all three components whatever the key, so a response always
+// reports them and can be reordered by a client itself.
+type SortKey string
+
+const (
+	// SortByValue lists the best value first, which is the order of a search that
+	// asked for none.
+	SortByValue SortKey = "value"
+	// SortByPrice lists the cheapest fare first.
+	SortByPrice SortKey = "price"
+	// SortByConvenience lists the quickest itinerary with the fewest stops first.
+	SortByConvenience SortKey = "convenience"
+)
+
+// ParseSortKey reads the sortBy a search asked for, written in any case and with
+// spaces around it. A missing key is the default, and a key that names no score
+// component is reported, so the search can be refused instead of quietly ordered
+// the way it was not asked for.
+func ParseSortKey(value string) (SortKey, bool) {
+	switch SortKey(strings.ToLower(strings.TrimSpace(value))) {
+	case "":
+		return SortByValue, true
+	case SortByValue:
+		return SortByValue, true
+	case SortByPrice:
+		return SortByPrice, true
+	case SortByConvenience:
+		return SortByConvenience, true
+	default:
+		return "", false
+	}
+}
+
+// Rank scores the flights of the subset and returns them ordered by the score
+// component the key names, best value first by default: the first flight of a
+// search result is the one to recommend.
 //
 // Every flight is compared to the best the subset offers: the cheapest fare, and
 // the quickest itinerary with the fewest stops. The cheapest flight scores 1 on
@@ -31,7 +67,7 @@ const (
 // travel time a provider could not normalize (zero) earns no credit for that
 // component, while the stops of the itinerary always count.
 // Flights that score the same keep the order they were given in.
-func Rank(flights []provider.FlightData) []provider.FlightData {
+func Rank(flights []provider.FlightData, by SortKey) []provider.FlightData {
 	cheapest, quickest := reference(flights)
 
 	ranked := make([]provider.FlightData, 0, len(flights))
@@ -42,10 +78,22 @@ func Rank(flights []provider.FlightData) []provider.FlightData {
 	}
 
 	sort.SliceStable(ranked, func(i, j int) bool {
-		return ranked[i].Score.Value > ranked[j].Score.Value
+		return component(ranked[i], by) > component(ranked[j], by)
 	})
 
 	return ranked
+}
+
+// component is the score the flights of a result are ordered by.
+func component(flight provider.FlightData, by SortKey) float64 {
+	switch by {
+	case SortByPrice:
+		return flight.Score.Price
+	case SortByConvenience:
+		return flight.Score.Convenience
+	default:
+		return flight.Score.Value
+	}
 }
 
 // reference returns the cheapest fare and the shortest travel time of the

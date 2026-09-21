@@ -135,6 +135,91 @@ func TestSearchReturnsTheFlightsBestValueFirst(t *testing.T) {
 	}
 }
 
+// sortableFlights is a subset whose best value, cheapest and most convenient
+// flight are three different flights, so each order is told apart.
+func sortableFlights(t *testing.T) []provider.FlightData {
+	t.Helper()
+
+	return []provider.FlightData{
+		// The most expensive, but direct and quick as well.
+		newFlight(t, "GA403_Garuda", "CGK", "DPS", 900000, 110, 0),
+		// The cheapest, but the slowest and with two stops.
+		newFlight(t, "QZ520_AirAsia", "CGK", "DPS", 650000, 200, 2),
+		// The best value: nearly as cheap as the cheapest, direct and the quickest.
+		newFlight(t, "JT740_Lion Air", "CGK", "DPS", 700000, 100, 0),
+	}
+}
+
+func TestSearchSortsByTheKeyItWasGiven(t *testing.T) {
+	tests := []struct {
+		name   string
+		sortBy string
+		want   []string
+	}{
+		{
+			name: "left out, best value first",
+			want: []string{"JT740_Lion Air", "QZ520_AirAsia", "GA403_Garuda"},
+		},
+		{
+			name:   "price, cheapest fare first",
+			sortBy: "price",
+			want:   []string{"QZ520_AirAsia", "JT740_Lion Air", "GA403_Garuda"},
+		},
+		{
+			name:   "convenience, most convenient first",
+			sortBy: "convenience",
+			want:   []string{"JT740_Lion Air", "GA403_Garuda", "QZ520_AirAsia"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			searcher := &fakeProvider{flights: sortableFlights(t)}
+
+			criteria := criteria()
+			criteria.SortBy = tt.sortBy
+
+			result, err := newService(nil, searcher).Search(context.Background(), criteria)
+			if err != nil {
+				t.Fatalf("Search() error = %v, want nil", err)
+			}
+
+			if got := flightIds(result.Flights); !slices.Equal(got, tt.want) {
+				t.Errorf("Flights = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestSearchReportsTheOrderItApplied keeps the echoed criteria honest: a search
+// that asked for no order reports the one it was given.
+func TestSearchReportsTheOrderItApplied(t *testing.T) {
+	tests := []struct {
+		name   string
+		sortBy string
+		want   string
+	}{
+		{name: "left out", want: "value"},
+		{name: "asked for, in another case", sortBy: "PRICE", want: "price"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			criteria := criteria()
+			criteria.SortBy = tt.sortBy
+
+			result, err := newService(nil, &fakeProvider{}).Search(context.Background(), criteria)
+			if err != nil {
+				t.Fatalf("Search() error = %v, want nil", err)
+			}
+
+			if got := result.SearchCriteria.SortBy; got != tt.want {
+				t.Errorf("SearchCriteria.SortBy = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSearchScoresTheFlightsItReturns(t *testing.T) {
 	searcher := &fakeProvider{flights: recordedFlights(t)}
 
@@ -232,6 +317,26 @@ func TestSearchRejectsAnInvalidDepartureDate(t *testing.T) {
 
 	if _, err := newService(nil, searcher).Search(context.Background(), invalid); !errors.Is(err, ErrInvalidCriteria) {
 		t.Errorf("Search() error = %v, want %v", err, ErrInvalidCriteria)
+	}
+	if got := len(searcher.requestsSeen()); got != 0 {
+		t.Errorf("providers queried %d times, want 0", got)
+	}
+}
+
+// TestSearchRejectsAnUnknownSortBy refuses an order no flight scores, instead of
+// quietly answering in an order the client did not ask for.
+func TestSearchRejectsAnUnknownSortBy(t *testing.T) {
+	searcher := &fakeProvider{flights: recordedFlights(t)}
+
+	unknown := criteria()
+	unknown.SortBy = "cheapest"
+
+	_, err := newService(nil, searcher).Search(context.Background(), unknown)
+	if !errors.Is(err, ErrInvalidCriteria) {
+		t.Fatalf("Search() error = %v, want %v", err, ErrInvalidCriteria)
+	}
+	if got := err.Error(); !strings.Contains(got, "sortBy") {
+		t.Errorf("Search() error = %q, want it to name the key", got)
 	}
 	if got := len(searcher.requestsSeen()); got != 0 {
 		t.Errorf("providers queried %d times, want 0", got)
@@ -407,6 +512,46 @@ func TestSearchCountsTheWayBackInTheMetadata(t *testing.T) {
 	}
 	if got, want := result.Metadata.ProvidersQueried, 1; got != want {
 		t.Errorf("ProvidersQueried = %d, want %d, the provider the search asks twice", got, want)
+	}
+}
+
+// TestSearchSortsBothLegsByTheKeyItWasGiven keeps the way back in step with the
+// outbound leg: one search is one order.
+func TestSearchSortsBothLegsByTheKeyItWasGiven(t *testing.T) {
+	wayBack := []provider.FlightData{
+		newFlight(t, "QZ521_AirAsia", "DPS", "CGK", 650000, 200, 2),
+		newFlight(t, "JT741_Lion Air", "DPS", "CGK", 700000, 100, 0),
+	}
+	for i := range wayBack {
+		wayBack[i].Departure.Datetime = "2025-12-20T08:00:00+07:00"
+	}
+
+	searcher := &routeProvider{routes: map[string][]provider.FlightData{
+		"CGK-DPS": {
+			newFlight(t, "QZ520_AirAsia", "CGK", "DPS", 650000, 200, 2),
+			newFlight(t, "JT740_Lion Air", "CGK", "DPS", 700000, 100, 0),
+		},
+		"DPS-CGK": wayBack,
+	}}
+
+	trip := criteria()
+	trip.RoundTrip = boolPtr(true)
+	trip.ReturnDate = "2025-12-20"
+	trip.SortBy = "price"
+
+	result, err := newService(nil, searcher).Search(context.Background(), trip)
+	if err != nil {
+		t.Fatalf("Search() error = %v, want nil", err)
+	}
+
+	want := []string{"QZ520_AirAsia", "JT740_Lion Air"}
+	if got := flightIds(result.Flights); !slices.Equal(got, want) {
+		t.Errorf("Flights = %v, want %v, the cheapest first", got, want)
+	}
+
+	want = []string{"QZ521_AirAsia", "JT741_Lion Air"}
+	if got := flightIds(result.ReturnFlights); !slices.Equal(got, want) {
+		t.Errorf("ReturnFlights = %v, want %v, the cheapest first as well", got, want)
 	}
 }
 

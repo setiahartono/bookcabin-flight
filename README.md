@@ -178,6 +178,11 @@ Each flight carries the outcome in `score` (`provider.Score`, merged into
 (zero) earns no credit for that component, while the stops always count. Flights that score the
 same keep the order the providers answered in.
 
+The flights are listed best value first unless the search asked for another order with
+`sortBy` (see [Request](#request)): `price` lists the cheapest fare first and `convenience` the
+quickest itinerary with the fewest stops first. The key only decides the order, the scores
+themselves stay the same.
+
 The sample response below shows why the fare alone does not decide: the 485000 fare takes
 4h 20m with a stop, so the best value is a 595000 non-stop that arrives in 1h 40m.
 
@@ -236,9 +241,11 @@ The body of `POST /api/v1/search` is camelCase:
 | `passengers` | int | travellers to seat |
 | `cabinClass` | string | e.g. `economy`, matched case insensitively |
 | `roundTrip` | bool, optional | asks for the way back as well, reported in `return_flights` |
+| `sortBy` | string, optional | order of `flights` and `return_flights`: `value` (default), `price` or `convenience` |
 
 The response keeps snake_case: `search_criteria` echoes the criteria it applied as `departure_date`,
-`cabin_class`, `round_trip` and `return_date`. Snake_case request keys are no longer read, so a body
+`cabin_class`, `round_trip`, `return_date` and `sort_by`, which reports the order it was given even when
+the body asked for none. Snake_case request keys are no longer read, so a body
 written with `departure_date` is answered with `400 invalid search criteria: departureDate ""`,
 which names the key the endpoint reads.
 
@@ -247,12 +254,23 @@ date as the outbound trip it searches back, and its flights are reported in `ret
 `flights` keeps the outbound leg. A round trip without `returnDate` is answered with
 `400 invalid search criteria: returnDate is mandatory when roundTrip is true`.
 
+`sortBy` orders the flights of both legs: `value`, the order of a search that asks for none, lists the best
+value first, `price` the cheapest fare first, and `convenience` the quickest itinerary with the fewest stops
+first. Every flight is scored on all three whatever the key, so `score` is the same either way and the key
+only decides the order. Flights that score the same keep the order the providers answered in. A key outside
+the three is answered with `400 invalid search criteria: sortBy "cheapest", want value, price or convenience`.
+
 ```bash
 curl -s localhost:8080/api/v1/ping
 
 curl -s -X POST localhost:8080/api/v1/search \
   -H 'Content-Type: application/json' \
   -d '{"origin":"CGK","destination":"DPS","departureDate":"2025-12-15","passengers":1,"cabinClass":"economy"}'
+
+# the same search, cheapest fare first instead of best value first
+curl -s -X POST localhost:8080/api/v1/search \
+  -H 'Content-Type: application/json' \
+  -d '{"origin":"CGK","destination":"DPS","departureDate":"2025-12-15","passengers":1,"cabinClass":"economy","sortBy":"price"}'
 ```
 
 A search answers with the criteria it applied, the run metadata and the unified flights, best
@@ -262,7 +280,7 @@ with `"cache_hit": true` instead, without asking a provider.
 
 ```json
 {
-  "search_criteria": {"origin": "CGK", "destination": "DPS", "departure_date": "2025-12-15", "passengers": 1, "cabin_class": "economy", "round_trip": null, "return_date": ""},
+  "search_criteria": {"origin": "CGK", "destination": "DPS", "departure_date": "2025-12-15", "passengers": 1, "cabin_class": "economy", "round_trip": null, "return_date": "", "sort_by": "value"},
   "metadata": {"total_results": 9, "providers_queried": 4, "providers_failed": 0, "search_time_ms": 304, "cache_hit": false},
   "flights": [
     {

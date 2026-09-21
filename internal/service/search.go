@@ -81,13 +81,14 @@ func failureCount(err error) int {
 }
 
 // processFlightData collects the flights of one leg and returns them ready to be
-// reported, together with whether the providers answered from the cache.
-func (s *SearchService) processFlightData(ctx context.Context, req provider.SearchRequest, criteria SearchCriteria) ([]provider.FlightData, bool, error) {
+// reported, ordered by the score component the search asked for, together with
+// whether the providers answered from the cache.
+func (s *SearchService) processFlightData(ctx context.Context, req provider.SearchRequest, criteria SearchCriteria, sortBy scoring.SortKey) ([]provider.FlightData, bool, error) {
 	flights, cacheHit, aggregateErr := s.aggregator.Aggregate(ctx, req)
 
 	// Only the flights that match the criteria take part in the scoring
 	filtered := filter.FilterFlights(flights, criteria)
-	ranked := scoring.Rank(filtered)
+	ranked := scoring.Rank(filtered, sortBy)
 
 	return ranked, cacheHit, aggregateErr
 }
@@ -113,6 +114,22 @@ func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (Se
 		)
 	}
 
+	sortBy, ok := scoring.ParseSortKey(criteria.SortBy)
+	if !ok {
+		return SearchResult{}, fmt.Errorf(
+			"%w: sortBy %q, want %s, %s or %s",
+			ErrInvalidCriteria,
+			criteria.SortBy,
+			scoring.SortByValue,
+			scoring.SortByPrice,
+			scoring.SortByConvenience,
+		)
+	}
+
+	// The response echoes the criteria it applied, so a search that asked for no
+	// order reports the one it was given.
+	criteria.SortBy = string(sortBy)
+
 	departureReq := provider.SearchRequest{
 		Origin:        criteria.Origin,
 		Destination:   criteria.Destination,
@@ -137,7 +154,7 @@ func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (Se
 		defer wg.Done()
 
 		rankedDeparture, departureCached, departureAggErr =
-			s.processFlightData(ctx, departureReq, criteria)
+			s.processFlightData(ctx, departureReq, criteria, sortBy)
 	}()
 
 	if roundTrip {
@@ -167,7 +184,7 @@ func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (Se
 			defer wg.Done()
 
 			rankedReturn, returnCached, returnAggErr =
-				s.processFlightData(ctx, returnReq, returnCriteria)
+				s.processFlightData(ctx, returnReq, returnCriteria, sortBy)
 		}()
 	}
 

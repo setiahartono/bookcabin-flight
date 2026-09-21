@@ -54,12 +54,15 @@ func assertCriteria(t *testing.T, got, want service.SearchCriteria) {
 	if got.Passengers != want.Passengers || got.CabinClass != want.CabinClass {
 		t.Errorf("criteria = %+v, want %+v", got, want)
 	}
+	if got.SortBy != want.SortBy {
+		t.Errorf("criteria SortBy = %q, want %q", got.SortBy, want.SortBy)
+	}
 }
 
 func TestSearchMapsTheCamelCaseRequest(t *testing.T) {
 	searcher := &fakeSearcher{}
 
-	recorder := post(t, searcher, `{"origin":"CGK","destination":"DPS","departureDate":"2025-12-15","returnDate":"2025-12-20","passengers":2,"cabinClass":"economy","roundTrip":true}`)
+	recorder := post(t, searcher, `{"origin":"CGK","destination":"DPS","departureDate":"2025-12-15","returnDate":"2025-12-20","passengers":2,"cabinClass":"economy","roundTrip":true,"sortBy":"price"}`)
 
 	if got, want := recorder.Code, http.StatusOK; got != want {
 		t.Fatalf("status = %d, want %d (body %s)", got, want, recorder.Body)
@@ -71,6 +74,7 @@ func TestSearchMapsTheCamelCaseRequest(t *testing.T) {
 		DepartureDate: "2025-12-15",
 		Passengers:    2,
 		CabinClass:    "economy",
+		SortBy:        "price",
 	})
 
 	if got, want := searcher.criteria.ReturnDate, "2025-12-20"; got != want {
@@ -191,7 +195,7 @@ func TestSearchReportsAFailedSearch(t *testing.T) {
 }
 
 func TestSearchRendersTheCriteriaInSnakeCase(t *testing.T) {
-	recorder := post(t, &fakeSearcher{}, `{"origin":"CGK","destination":"DPS","departureDate":"2025-12-15","passengers":1,"cabinClass":"economy","roundTrip":true}`)
+	recorder := post(t, &fakeSearcher{}, `{"origin":"CGK","destination":"DPS","departureDate":"2025-12-15","passengers":1,"cabinClass":"economy","roundTrip":true,"sortBy":"price"}`)
 
 	var body struct {
 		SearchCriteria map[string]any `json:"search_criteria"`
@@ -202,8 +206,12 @@ func TestSearchRendersTheCriteriaInSnakeCase(t *testing.T) {
 
 	got := slices.Sorted(maps.Keys(body.SearchCriteria))
 
-	want := []string{"cabin_class", "departure_date", "destination", "origin", "passengers", "return_date", "round_trip"}
+	want := []string{"cabin_class", "departure_date", "destination", "origin", "passengers", "return_date", "round_trip", "sort_by"}
 	if !slices.Equal(got, want) {
 		t.Errorf("search_criteria keys = %v, want %v", got, want)
+	}
+
+	if got, want := body.SearchCriteria["sort_by"], "price"; got != want {
+		t.Errorf("search_criteria.sort_by = %v, want %v", got, want)
 	}
 }
