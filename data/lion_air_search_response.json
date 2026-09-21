@@ -134,6 +134,454 @@
             "hold": "20 kg"
           }
         }
+      },
+      {
+        "id": "JT780",
+        "carrier": {
+          "name": "Lion Air",
+          "iata": "JT"
+        },
+        "route": {
+          "from": {
+            "code": "CGK",
+            "name": "Soekarno-Hatta International",
+            "city": "Jakarta"
+          },
+          "to": {
+            "code": "UPG",
+            "name": "Sultan Hasanuddin International",
+            "city": "Makassar"
+          }
+        },
+        "schedule": {
+          "departure": "2025-12-15T08:20:00",
+          "departure_timezone": "Asia/Jakarta",
+          "arrival": "2025-12-15T11:35:00",
+          "arrival_timezone": "Asia/Makassar"
+        },
+        "flight_time": 135,
+        "is_direct": true,
+        "pricing": {
+          "total": 760000,
+          "currency": "IDR",
+          "fare_type": "ECONOMY"
+        },
+        "seats_left": 51,
+        "plane_type": "Boeing 737-900ER",
+        "services": {
+          "wifi_available": false,
+          "meals_included": false,
+          "baggage_allowance": {
+            "cabin": "7 kg",
+            "hold": "20 kg"
+          }
+        }
+      },
+      {
+        "id": "JT784",
+        "carrier": {
+          "name": "Lion Air",
+          "iata": "JT"
+        },
+        "route": {
+          "from": {
+            "code": "CGK",
+            "name": "Soekarno-Hatta International",
+            "city": "Jakarta"
+          },
+          "to": {
+            "code": "UPG",
+            "name": "Sultan Hasanuddin International",
+            "city": "Makassar"
+          }
+        },
+        "schedule": {
+          "departure": "2025-12-15T13:40:00",
+          "departure_timezone": "Asia/Jakarta",
+          "arrival": "2025-12-15T19:25:00",
+          "arrival_timezone": "Asia/Makassar"
+        },
+        "flight_time": 285,
+        "is_direct": false,
+        "stop_count": 1,
+        "layovers": [
+          {
+            "airport": "SUB",
+            "duration_minutes": 70
+          }
+        ],
+        "pricing": {
+          "total": 640000,
+          "currency": "IDR",
+          "fare_type": "ECONOMY"
+        },
+        "seats_left": 38,
+        "plane_type": "Boeing 737-800",
+        "services": {
+          "wifi_available": true,
+          "meals_included": false,
+          "baggage_allowance": {
+            "cabin": "7 kg",
+            "hold": "20 kg"
+          }
+        }
+      },
+      {
+        "id": "JT920",
+        "carrier": {
+          "name": "Lion Air",
+          "iata": "JT"
+        },
+        "route": {
+          "from": {
+            "code": "CGK",
+            "name": "Soekarno-Hatta International",
+            "city": "Jakarta"
+          },
+          "to": {
+            "code": "DJJ",
+            "name": "Sentani International",
+            "city": "Jayapura"
+          }
+        },
+        "schedule": {
+          "departure": "2025-12-15T06:15:00",
+          "departure_timezone": "Asia/Jakarta",
+          "arrival": "2025-12-15T13:10:00",
+          "arrival_timezone": "Asia/Jayapura"
+        },
+        "flight_time": 295,
+        "is_direct": true,
+        "pricing": {
+          "total": 1420000,
+          "currency": "IDR",
+          "fare_type": "ECONOMY"
+        },
+        "seats_left": 29,
+        "plane_type": "Boeing 737-900ER",
+        "services": {
+          "wifi_available": false,
+          "meals_included": true,
+          "baggage_allowance": {
+            "cabin": "7 kg",
+            "hold": "20 kg"
+          }
+        }
+      },
+      {
+        "id": "JT924",
+        "carrier": {
+          "name": "Lion Air",
+          "iata": "JT"
+        },
+        "route": {
+          "from": {
+            "code": "CGK",
+            "name": "Soekarno-Hatta International",
+            "city": "Jakarta"
+          },
+          "to": {
+            "code": "DJJ",
+            "name": "Sentani International",
+            "city": "Jayapura"
+          }
+        },
+        "schedule": {
+          "departure": "2025-12-15T15:30:00",
+          "departure_timezone": "Asia/Jakarta",
+          "arrival": "2025-12-15T23:25:00",
+          "arrival_timezone": "Asia/Jayapura"
+        },
+        "flight_time": 355,
+        "is_direct": false,
+        "stop_count": 1,
+        "layovers": [
+          {
+            "airport": "UPG",
+            "duration_minutes": 85
+          }
+        ],
+        "pricing": {
+          "total": 1280000,
+          "currency": "IDR",
+          "fare_type": "ECONOMY"
+        },
+        "seats_left": 34,
+        "plane_type": "Boeing 737-800",
+        "services": {
+          "wifi_available": false,
+          "meals_included": false,
+          "baggage_allowance": {
+            "cabin": "7 kg",
+            "hold": "20 kg"
+          }
+        }
+      },
+      {
+        "id": "JT741",
+        "carrier": {
+          "name": "Lion Air",
+          "iata": "JT"
+        },
+        "route": {
+          "from": {
+            "code": "DPS",
+            "name": "Ngurah Rai International",
+            "city": "Denpasar"
+          },
+          "to": {
+            "code": "CGK",
+            "name": "Soekarno-Hatta International",
+            "city": "Jakarta"
+          }
+        },
+        "schedule": {
+          "departure": "2025-12-20T09:40:00",
+          "departure_timezone": "Asia/Makassar",
+          "arrival": "2025-12-20T10:35:00",
+          "arrival_timezone": "Asia/Jakarta"
+        },
+        "flight_time": 115,
+        "is_direct": true,
+        "pricing": {
+          "total": 600000,
+          "currency": "IDR",
+          "fare_type": "ECONOMY"
+        },
+        "seats_left": 56,
+        "plane_type": "Boeing 737-900ER",
+        "services": {
+          "wifi_available": false,
+          "meals_included": false,
+          "baggage_allowance": {
+            "cabin": "7 kg",
+            "hold": "20 kg"
+          }
+        }
+      },
+      {
+        "id": "JT745",
+        "carrier": {
+          "name": "Lion Air",
+          "iata": "JT"
+        },
+        "route": {
+          "from": {
+            "code": "DPS",
+            "name": "Ngurah Rai International",
+            "city": "Denpasar"
+          },
+          "to": {
+            "code": "CGK",
+            "name": "Soekarno-Hatta International",
+            "city": "Jakarta"
+          }
+        },
+        "schedule": {
+          "departure": "2025-12-20T16:20:00",
+          "departure_timezone": "Asia/Makassar",
+          "arrival": "2025-12-20T19:45:00",
+          "arrival_timezone": "Asia/Jakarta"
+        },
+        "flight_time": 265,
+        "is_direct": false,
+        "stop_count": 1,
+        "layovers": [
+          {
+            "airport": "SUB",
+            "duration_minutes": 95
+          }
+        ],
+        "pricing": {
+          "total": 560000,
+          "currency": "IDR",
+          "fare_type": "ECONOMY"
+        },
+        "seats_left": 43,
+        "plane_type": "Boeing 737-800",
+        "services": {
+          "wifi_available": true,
+          "meals_included": false,
+          "baggage_allowance": {
+            "cabin": "7 kg",
+            "hold": "20 kg"
+          }
+        }
+      },
+      {
+        "id": "JT749",
+        "carrier": {
+          "name": "Lion Air",
+          "iata": "JT"
+        },
+        "route": {
+          "from": {
+            "code": "DPS",
+            "name": "Ngurah Rai International",
+            "city": "Denpasar"
+          },
+          "to": {
+            "code": "CGK",
+            "name": "Soekarno-Hatta International",
+            "city": "Jakarta"
+          }
+        },
+        "schedule": {
+          "departure": "2025-12-22T07:05:00",
+          "departure_timezone": "Asia/Makassar",
+          "arrival": "2025-12-22T08:00:00",
+          "arrival_timezone": "Asia/Jakarta"
+        },
+        "flight_time": 115,
+        "is_direct": true,
+        "pricing": {
+          "total": 615000,
+          "currency": "IDR",
+          "fare_type": "ECONOMY"
+        },
+        "seats_left": 49,
+        "plane_type": "Boeing 737-900ER",
+        "services": {
+          "wifi_available": false,
+          "meals_included": false,
+          "baggage_allowance": {
+            "cabin": "7 kg",
+            "hold": "20 kg"
+          }
+        }
+      },
+      {
+        "id": "JT781",
+        "carrier": {
+          "name": "Lion Air",
+          "iata": "JT"
+        },
+        "route": {
+          "from": {
+            "code": "UPG",
+            "name": "Sultan Hasanuddin International",
+            "city": "Makassar"
+          },
+          "to": {
+            "code": "CGK",
+            "name": "Soekarno-Hatta International",
+            "city": "Jakarta"
+          }
+        },
+        "schedule": {
+          "departure": "2025-12-20T12:25:00",
+          "departure_timezone": "Asia/Makassar",
+          "arrival": "2025-12-20T13:40:00",
+          "arrival_timezone": "Asia/Jakarta"
+        },
+        "flight_time": 135,
+        "is_direct": true,
+        "pricing": {
+          "total": 690000,
+          "currency": "IDR",
+          "fare_type": "ECONOMY"
+        },
+        "seats_left": 47,
+        "plane_type": "Boeing 737-900ER",
+        "services": {
+          "wifi_available": false,
+          "meals_included": true,
+          "baggage_allowance": {
+            "cabin": "7 kg",
+            "hold": "20 kg"
+          }
+        }
+      },
+      {
+        "id": "JT785",
+        "carrier": {
+          "name": "Lion Air",
+          "iata": "JT"
+        },
+        "route": {
+          "from": {
+            "code": "UPG",
+            "name": "Sultan Hasanuddin International",
+            "city": "Makassar"
+          },
+          "to": {
+            "code": "CGK",
+            "name": "Soekarno-Hatta International",
+            "city": "Jakarta"
+          }
+        },
+        "schedule": {
+          "departure": "2025-12-20T18:50:00",
+          "departure_timezone": "Asia/Makassar",
+          "arrival": "2025-12-20T22:15:00",
+          "arrival_timezone": "Asia/Jakarta"
+        },
+        "flight_time": 265,
+        "is_direct": false,
+        "stop_count": 1,
+        "layovers": [
+          {
+            "airport": "SUB",
+            "duration_minutes": 80
+          }
+        ],
+        "pricing": {
+          "total": 650000,
+          "currency": "IDR",
+          "fare_type": "ECONOMY"
+        },
+        "seats_left": 40,
+        "plane_type": "Boeing 737-800",
+        "services": {
+          "wifi_available": false,
+          "meals_included": false,
+          "baggage_allowance": {
+            "cabin": "7 kg",
+            "hold": "20 kg"
+          }
+        }
+      },
+      {
+        "id": "JT789",
+        "carrier": {
+          "name": "Lion Air",
+          "iata": "JT"
+        },
+        "route": {
+          "from": {
+            "code": "UPG",
+            "name": "Sultan Hasanuddin International",
+            "city": "Makassar"
+          },
+          "to": {
+            "code": "CGK",
+            "name": "Soekarno-Hatta International",
+            "city": "Jakarta"
+          }
+        },
+        "schedule": {
+          "departure": "2025-12-22T10:10:00",
+          "departure_timezone": "Asia/Makassar",
+          "arrival": "2025-12-22T11:25:00",
+          "arrival_timezone": "Asia/Jakarta"
+        },
+        "flight_time": 135,
+        "is_direct": true,
+        "pricing": {
+          "total": 705000,
+          "currency": "IDR",
+          "fare_type": "ECONOMY"
+        },
+        "seats_left": 44,
+        "plane_type": "Boeing 737-900ER",
+        "services": {
+          "wifi_available": false,
+          "meals_included": true,
+          "baggage_allowance": {
+            "cabin": "7 kg",
+            "hold": "20 kg"
+          }
+        }
       }
     ]
   }

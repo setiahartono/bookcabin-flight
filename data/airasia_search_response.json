@@ -62,6 +62,170 @@
       "seats": 88,
       "cabin_class": "economy",
       "baggage_note": "Cabin baggage only, checked bags additional fee"
+    },
+    {
+      "flight_code": "QZ840",
+      "airline": "AirAsia",
+      "from_airport": "CGK",
+      "to_airport": "UPG",
+      "depart_time": "2025-12-15T08:20:00+07:00",
+      "arrive_time": "2025-12-15T11:35:00+08:00",
+      "duration_hours": 2.25,
+      "direct_flight": true,
+      "price_idr": 780000,
+      "seats": 64,
+      "cabin_class": "economy",
+      "baggage_note": "Cabin baggage only, checked bags additional fee"
+    },
+    {
+      "flight_code": "QZ844",
+      "airline": "AirAsia",
+      "from_airport": "CGK",
+      "to_airport": "UPG",
+      "depart_time": "2025-12-15T13:40:00+07:00",
+      "arrive_time": "2025-12-15T19:25:00+08:00",
+      "duration_hours": 4.75,
+      "direct_flight": false,
+      "stops": [
+        {
+          "airport": "SUB",
+          "wait_time_minutes": 70
+        }
+      ],
+      "price_idr": 690000,
+      "seats": 48,
+      "cabin_class": "economy",
+      "baggage_note": "Cabin baggage only, checked bags additional fee"
+    },
+    {
+      "flight_code": "QZ970",
+      "airline": "AirAsia",
+      "from_airport": "CGK",
+      "to_airport": "DJJ",
+      "depart_time": "2025-12-15T06:15:00+07:00",
+      "arrive_time": "2025-12-15T13:10:00+09:00",
+      "duration_hours": 4.92,
+      "direct_flight": true,
+      "price_idr": 1450000,
+      "seats": 36,
+      "cabin_class": "economy",
+      "baggage_note": "Cabin baggage only, checked bags additional fee"
+    },
+    {
+      "flight_code": "QZ974",
+      "airline": "AirAsia",
+      "from_airport": "CGK",
+      "to_airport": "DJJ",
+      "depart_time": "2025-12-15T15:30:00+07:00",
+      "arrive_time": "2025-12-15T23:25:00+09:00",
+      "duration_hours": 5.92,
+      "direct_flight": false,
+      "stops": [
+        {
+          "airport": "UPG",
+          "wait_time_minutes": 85
+        }
+      ],
+      "price_idr": 1290000,
+      "seats": 52,
+      "cabin_class": "economy",
+      "baggage_note": "Cabin baggage only, checked bags additional fee"
+    },
+    {
+      "flight_code": "QZ521",
+      "airline": "AirAsia",
+      "from_airport": "DPS",
+      "to_airport": "CGK",
+      "depart_time": "2025-12-20T09:40:00+08:00",
+      "arrive_time": "2025-12-20T10:35:00+07:00",
+      "duration_hours": 1.92,
+      "direct_flight": true,
+      "price_idr": 620000,
+      "seats": 71,
+      "cabin_class": "economy",
+      "baggage_note": "Cabin baggage only, checked bags additional fee"
+    },
+    {
+      "flight_code": "QZ525",
+      "airline": "AirAsia",
+      "from_airport": "DPS",
+      "to_airport": "CGK",
+      "depart_time": "2025-12-20T16:20:00+08:00",
+      "arrive_time": "2025-12-20T19:45:00+07:00",
+      "duration_hours": 4.42,
+      "direct_flight": false,
+      "stops": [
+        {
+          "airport": "SUB",
+          "wait_time_minutes": 95
+        }
+      ],
+      "price_idr": 585000,
+      "seats": 44,
+      "cabin_class": "economy",
+      "baggage_note": "Cabin baggage only, checked bags additional fee"
+    },
+    {
+      "flight_code": "QZ529",
+      "airline": "AirAsia",
+      "from_airport": "DPS",
+      "to_airport": "CGK",
+      "depart_time": "2025-12-22T07:05:00+08:00",
+      "arrive_time": "2025-12-22T08:00:00+07:00",
+      "duration_hours": 1.92,
+      "direct_flight": true,
+      "price_idr": 640000,
+      "seats": 58,
+      "cabin_class": "economy",
+      "baggage_note": "Cabin baggage only, checked bags additional fee"
+    },
+    {
+      "flight_code": "QZ841",
+      "airline": "AirAsia",
+      "from_airport": "UPG",
+      "to_airport": "CGK",
+      "depart_time": "2025-12-20T12:25:00+08:00",
+      "arrive_time": "2025-12-20T13:40:00+07:00",
+      "duration_hours": 2.25,
+      "direct_flight": true,
+      "price_idr": 700000,
+      "seats": 62,
+      "cabin_class": "economy",
+      "baggage_note": "Cabin baggage only, checked bags additional fee"
+    },
+    {
+      "flight_code": "QZ845",
+      "airline": "AirAsia",
+      "from_airport": "UPG",
+      "to_airport": "CGK",
+      "depart_time": "2025-12-20T18:50:00+08:00",
+      "arrive_time": "2025-12-20T22:15:00+07:00",
+      "duration_hours": 4.42,
+      "direct_flight": false,
+      "stops": [
+        {
+          "airport": "SUB",
+          "wait_time_minutes": 80
+        }
+      ],
+      "price_idr": 665000,
+      "seats": 39,
+      "cabin_class": "economy",
+      "baggage_note": "Cabin baggage only, checked bags additional fee"
+    },
+    {
+      "flight_code": "QZ849",
+      "airline": "AirAsia",
+      "from_airport": "UPG",
+      "to_airport": "CGK",
+      "depart_time": "2025-12-22T10:10:00+08:00",
+      "arrive_time": "2025-12-22T11:25:00+07:00",
+      "duration_hours": 2.25,
+      "direct_flight": true,
+      "price_idr": 720000,
+      "seats": 55,
+      "cabin_class": "economy",
+      "baggage_note": "Cabin baggage only, checked bags additional fee"
     }
   ]
 }

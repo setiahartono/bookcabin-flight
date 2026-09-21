@@ -8,7 +8,6 @@ import (
 
 func TestGarudaSearchReturnsEveryRecordedFlight(t *testing.T) {
 	tests := []struct {
-		index              int
 		id                 string
 		origin             string
 		destination        string
@@ -21,7 +20,6 @@ func TestGarudaSearchReturnsEveryRecordedFlight(t *testing.T) {
 		arrivalTimestamp   int64
 	}{
 		{
-			index:              0,
 			id:                 "GA400",
 			origin:             "CGK",
 			destination:        "DPS",
@@ -33,7 +31,6 @@ func TestGarudaSearchReturnsEveryRecordedFlight(t *testing.T) {
 			arrivalTimestamp:   1765759800,
 		},
 		{
-			index:              1,
 			id:                 "GA410",
 			origin:             "CGK",
 			destination:        "DPS",
@@ -45,7 +42,6 @@ func TestGarudaSearchReturnsEveryRecordedFlight(t *testing.T) {
 			arrivalTimestamp:   1765772700,
 		},
 		{
-			index:              2,
 			id:                 "GA315",
 			origin:             "CGK",
 			destination:        "SUB",
@@ -54,6 +50,125 @@ func TestGarudaSearchReturnsEveryRecordedFlight(t *testing.T) {
 			seats:              22,
 			departureTimestamp: 1765782000,
 			arrivalTimestamp:   1765787400,
+		}, {
+			id:                 "GA512",
+			origin:             "CGK",
+			destination:        "UPG",
+			durationFormatted:  "2h 15m",
+			stops:              0,
+			priceIDR:           1380000,
+			seats:              24,
+			amenities:          3,
+			departureTimestamp: 1765761600,
+			arrivalTimestamp:   1765769700,
+		},
+		{
+			id:                 "GA516",
+			origin:             "CGK",
+			destination:        "UPG",
+			durationFormatted:  "4h 45m",
+			stops:              1,
+			priceIDR:           1180000,
+			seats:              19,
+			amenities:          2,
+			departureTimestamp: 1765780800,
+			arrivalTimestamp:   1765797900,
+		},
+		{
+			id:                 "GA652",
+			origin:             "CGK",
+			destination:        "DJJ",
+			durationFormatted:  "4h 55m",
+			stops:              0,
+			priceIDR:           2150000,
+			seats:              16,
+			amenities:          3,
+			departureTimestamp: 1765754100,
+			arrivalTimestamp:   1765771800,
+		},
+		{
+			id:                 "GA656",
+			origin:             "CGK",
+			destination:        "DJJ",
+			durationFormatted:  "5h 55m",
+			stops:              1,
+			priceIDR:           1890000,
+			seats:              21,
+			amenities:          1,
+			departureTimestamp: 1765787400,
+			arrivalTimestamp:   1765808700,
+		},
+		{
+			id:                 "GA401",
+			origin:             "DPS",
+			destination:        "CGK",
+			durationFormatted:  "1h 55m",
+			stops:              0,
+			priceIDR:           1120000,
+			seats:              23,
+			amenities:          2,
+			departureTimestamp: 1766194800,
+			arrivalTimestamp:   1766201700,
+		},
+		{
+			id:                 "GA405",
+			origin:             "DPS",
+			destination:        "CGK",
+			durationFormatted:  "4h 25m",
+			stops:              1,
+			priceIDR:           980000,
+			seats:              17,
+			amenities:          1,
+			departureTimestamp: 1766218800,
+			arrivalTimestamp:   1766234700,
+		},
+		{
+			id:                 "GA409",
+			origin:             "DPS",
+			destination:        "CGK",
+			durationFormatted:  "1h 55m",
+			stops:              0,
+			priceIDR:           1150000,
+			seats:              26,
+			amenities:          2,
+			departureTimestamp: 1766358300,
+			arrivalTimestamp:   1766365200,
+		},
+		{
+			id:                 "GA513",
+			origin:             "UPG",
+			destination:        "CGK",
+			durationFormatted:  "2h 15m",
+			stops:              0,
+			priceIDR:           1250000,
+			seats:              20,
+			amenities:          3,
+			departureTimestamp: 1766204700,
+			arrivalTimestamp:   1766212800,
+		},
+		{
+			id:                 "GA517",
+			origin:             "UPG",
+			destination:        "CGK",
+			durationFormatted:  "4h 25m",
+			stops:              1,
+			priceIDR:           1050000,
+			seats:              15,
+			amenities:          1,
+			departureTimestamp: 1766227800,
+			arrivalTimestamp:   1766243700,
+		},
+		{
+			id:                 "GA521",
+			origin:             "UPG",
+			destination:        "CGK",
+			durationFormatted:  "2h 15m",
+			stops:              0,
+			priceIDR:           1290000,
+			seats:              27,
+			amenities:          2,
+			departureTimestamp: 1766369400,
+			arrivalTimestamp:   1766377500,
 		},
 	}
 
@@ -71,9 +186,17 @@ func TestGarudaSearchReturnsEveryRecordedFlight(t *testing.T) {
 		t.Fatalf("len(Search()) = %d, want %d", got, want)
 	}
 
+	byID := make(map[string]FlightData, len(flights))
+	for _, flight := range flights {
+		byID[flight.FlightNumber] = flight
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.id, func(t *testing.T) {
-			flight := flights[tt.index]
+			flight, ok := byID[tt.id]
+			if !ok {
+				t.Fatalf("Search() answered no flight %q", tt.id)
+			}
 
 			if got := flight.Id; got != tt.id+"_Garuda Indonesia" {
 				t.Errorf("Id = %q, want %q", got, tt.id+"_Garuda Indonesia")

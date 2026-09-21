@@ -12,6 +12,7 @@ var indonesianAirportCities = map[string]string{
 	"SOC": "Solo",
 	"SUB": "Surabaya",
 	"UPG": "Makassar",
+	"DJJ": "Jayapura",
 }
 
 type Baggage struct {

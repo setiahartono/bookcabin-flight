@@ -128,6 +128,454 @@
         "carry_on": 1,
         "checked": 2
       }
+    },
+    {
+      "flight_id": "GA512",
+      "airline": "Garuda Indonesia",
+      "airline_code": "GA",
+      "departure": {
+        "airport": "CGK",
+        "city": "Jakarta",
+        "time": "2025-12-15T08:20:00+07:00",
+        "terminal": "3"
+      },
+      "arrival": {
+        "airport": "UPG",
+        "city": "Makassar",
+        "time": "2025-12-15T11:35:00+08:00",
+        "terminal": "I"
+      },
+      "duration_minutes": 135,
+      "stops": 0,
+      "aircraft": "Boeing 737-800",
+      "price": {
+        "amount": 1380000,
+        "currency": "IDR"
+      },
+      "available_seats": 24,
+      "fare_class": "economy",
+      "baggage": {
+        "carry_on": 1,
+        "checked": 2
+      },
+      "amenities": [
+        "wifi",
+        "meal",
+        "entertainment"
+      ]
+    },
+    {
+      "flight_id": "GA516",
+      "airline": "Garuda Indonesia",
+      "airline_code": "GA",
+      "departure": {
+        "airport": "CGK",
+        "city": "Jakarta",
+        "time": "2025-12-15T13:40:00+07:00",
+        "terminal": "3"
+      },
+      "arrival": {
+        "airport": "UPG",
+        "city": "Makassar",
+        "time": "2025-12-15T19:25:00+08:00",
+        "terminal": "I"
+      },
+      "duration_minutes": 285,
+      "stops": 1,
+      "aircraft": "Boeing 737-800",
+      "price": {
+        "amount": 1180000,
+        "currency": "IDR"
+      },
+      "segments": [
+        {
+          "flight_number": "GA",
+          "departure": {
+            "airport": "CGK",
+            "time": "2025-12-15T13:40:00+07:00"
+          },
+          "arrival": {
+            "airport": "SUB",
+            "time": "2025-12-15T15:45:00+07:00"
+          },
+          "duration_minutes": 125
+        },
+        {
+          "flight_number": "GA",
+          "departure": {
+            "airport": "SUB",
+            "time": "2025-12-15T17:00:00+07:00"
+          },
+          "arrival": {
+            "airport": "UPG",
+            "time": "2025-12-15T19:25:00+08:00"
+          },
+          "duration_minutes": 85,
+          "layover_minutes": 75
+        }
+      ],
+      "available_seats": 19,
+      "fare_class": "economy",
+      "baggage": {
+        "carry_on": 1,
+        "checked": 2
+      },
+      "amenities": [
+        "wifi",
+        "meal"
+      ]
+    },
+    {
+      "flight_id": "GA652",
+      "airline": "Garuda Indonesia",
+      "airline_code": "GA",
+      "departure": {
+        "airport": "CGK",
+        "city": "Jakarta",
+        "time": "2025-12-15T06:15:00+07:00",
+        "terminal": "3"
+      },
+      "arrival": {
+        "airport": "DJJ",
+        "city": "Jayapura",
+        "time": "2025-12-15T13:10:00+09:00",
+        "terminal": "I"
+      },
+      "duration_minutes": 295,
+      "stops": 0,
+      "aircraft": "Boeing 737-800",
+      "price": {
+        "amount": 2150000,
+        "currency": "IDR"
+      },
+      "available_seats": 16,
+      "fare_class": "economy",
+      "baggage": {
+        "carry_on": 1,
+        "checked": 2
+      },
+      "amenities": [
+        "wifi",
+        "meal",
+        "entertainment"
+      ]
+    },
+    {
+      "flight_id": "GA656",
+      "airline": "Garuda Indonesia",
+      "airline_code": "GA",
+      "departure": {
+        "airport": "CGK",
+        "city": "Jakarta",
+        "time": "2025-12-15T15:30:00+07:00",
+        "terminal": "3"
+      },
+      "arrival": {
+        "airport": "DJJ",
+        "city": "Jayapura",
+        "time": "2025-12-15T23:25:00+09:00",
+        "terminal": "I"
+      },
+      "duration_minutes": 355,
+      "stops": 1,
+      "aircraft": "Boeing 737-800",
+      "price": {
+        "amount": 1890000,
+        "currency": "IDR"
+      },
+      "segments": [
+        {
+          "flight_number": "GA",
+          "departure": {
+            "airport": "CGK",
+            "time": "2025-12-15T15:30:00+07:00"
+          },
+          "arrival": {
+            "airport": "UPG",
+            "time": "2025-12-15T18:15:00+08:00"
+          },
+          "duration_minutes": 165
+        },
+        {
+          "flight_number": "GA",
+          "departure": {
+            "airport": "UPG",
+            "time": "2025-12-15T20:40:00+08:00"
+          },
+          "arrival": {
+            "airport": "DJJ",
+            "time": "2025-12-15T23:25:00+09:00"
+          },
+          "duration_minutes": 105,
+          "layover_minutes": 85
+        }
+      ],
+      "available_seats": 21,
+      "fare_class": "economy",
+      "baggage": {
+        "carry_on": 1,
+        "checked": 2
+      },
+      "amenities": [
+        "meal"
+      ]
+    },
+    {
+      "flight_id": "GA401",
+      "airline": "Garuda Indonesia",
+      "airline_code": "GA",
+      "departure": {
+        "airport": "DPS",
+        "city": "Denpasar",
+        "time": "2025-12-20T09:40:00+08:00",
+        "terminal": "I"
+      },
+      "arrival": {
+        "airport": "CGK",
+        "city": "Jakarta",
+        "time": "2025-12-20T10:35:00+07:00",
+        "terminal": "3"
+      },
+      "duration_minutes": 115,
+      "stops": 0,
+      "aircraft": "Boeing 737-800",
+      "price": {
+        "amount": 1120000,
+        "currency": "IDR"
+      },
+      "available_seats": 23,
+      "fare_class": "economy",
+      "baggage": {
+        "carry_on": 1,
+        "checked": 2
+      },
+      "amenities": [
+        "wifi",
+        "meal"
+      ]
+    },
+    {
+      "flight_id": "GA405",
+      "airline": "Garuda Indonesia",
+      "airline_code": "GA",
+      "departure": {
+        "airport": "DPS",
+        "city": "Denpasar",
+        "time": "2025-12-20T16:20:00+08:00",
+        "terminal": "I"
+      },
+      "arrival": {
+        "airport": "CGK",
+        "city": "Jakarta",
+        "time": "2025-12-20T19:45:00+07:00",
+        "terminal": "3"
+      },
+      "duration_minutes": 265,
+      "stops": 1,
+      "aircraft": "Boeing 737-800",
+      "price": {
+        "amount": 980000,
+        "currency": "IDR"
+      },
+      "segments": [
+        {
+          "flight_number": "GA",
+          "departure": {
+            "airport": "DPS",
+            "time": "2025-12-20T16:20:00+08:00"
+          },
+          "arrival": {
+            "airport": "SUB",
+            "time": "2025-12-20T17:10:00+08:00"
+          },
+          "duration_minutes": 50
+        },
+        {
+          "flight_number": "GA",
+          "departure": {
+            "airport": "SUB",
+            "time": "2025-12-20T17:45:00+07:00"
+          },
+          "arrival": {
+            "airport": "CGK",
+            "time": "2025-12-20T19:45:00+07:00"
+          },
+          "duration_minutes": 120,
+          "layover_minutes": 95
+        }
+      ],
+      "available_seats": 17,
+      "fare_class": "economy",
+      "baggage": {
+        "carry_on": 1,
+        "checked": 2
+      },
+      "amenities": [
+        "wifi"
+      ]
+    },
+    {
+      "flight_id": "GA409",
+      "airline": "Garuda Indonesia",
+      "airline_code": "GA",
+      "departure": {
+        "airport": "DPS",
+        "city": "Denpasar",
+        "time": "2025-12-22T07:05:00+08:00",
+        "terminal": "I"
+      },
+      "arrival": {
+        "airport": "CGK",
+        "city": "Jakarta",
+        "time": "2025-12-22T08:00:00+07:00",
+        "terminal": "3"
+      },
+      "duration_minutes": 115,
+      "stops": 0,
+      "aircraft": "Boeing 737-800",
+      "price": {
+        "amount": 1150000,
+        "currency": "IDR"
+      },
+      "available_seats": 26,
+      "fare_class": "economy",
+      "baggage": {
+        "carry_on": 1,
+        "checked": 2
+      },
+      "amenities": [
+        "wifi",
+        "meal"
+      ]
+    },
+    {
+      "flight_id": "GA513",
+      "airline": "Garuda Indonesia",
+      "airline_code": "GA",
+      "departure": {
+        "airport": "UPG",
+        "city": "Makassar",
+        "time": "2025-12-20T12:25:00+08:00",
+        "terminal": "I"
+      },
+      "arrival": {
+        "airport": "CGK",
+        "city": "Jakarta",
+        "time": "2025-12-20T13:40:00+07:00",
+        "terminal": "3"
+      },
+      "duration_minutes": 135,
+      "stops": 0,
+      "aircraft": "Boeing 737-800",
+      "price": {
+        "amount": 1250000,
+        "currency": "IDR"
+      },
+      "available_seats": 20,
+      "fare_class": "economy",
+      "baggage": {
+        "carry_on": 1,
+        "checked": 2
+      },
+      "amenities": [
+        "wifi",
+        "meal",
+        "entertainment"
+      ]
+    },
+    {
+      "flight_id": "GA517",
+      "airline": "Garuda Indonesia",
+      "airline_code": "GA",
+      "departure": {
+        "airport": "UPG",
+        "city": "Makassar",
+        "time": "2025-12-20T18:50:00+08:00",
+        "terminal": "I"
+      },
+      "arrival": {
+        "airport": "CGK",
+        "city": "Jakarta",
+        "time": "2025-12-20T22:15:00+07:00",
+        "terminal": "3"
+      },
+      "duration_minutes": 265,
+      "stops": 1,
+      "aircraft": "Boeing 737-800",
+      "price": {
+        "amount": 1050000,
+        "currency": "IDR"
+      },
+      "segments": [
+        {
+          "flight_number": "GA",
+          "departure": {
+            "airport": "UPG",
+            "time": "2025-12-20T18:50:00+08:00"
+          },
+          "arrival": {
+            "airport": "SUB",
+            "time": "2025-12-20T19:05:00+08:00"
+          },
+          "duration_minutes": 75
+        },
+        {
+          "flight_number": "GA",
+          "departure": {
+            "airport": "SUB",
+            "time": "2025-12-20T20:25:00+07:00"
+          },
+          "arrival": {
+            "airport": "CGK",
+            "time": "2025-12-20T22:15:00+07:00"
+          },
+          "duration_minutes": 110,
+          "layover_minutes": 80
+        }
+      ],
+      "available_seats": 15,
+      "fare_class": "economy",
+      "baggage": {
+        "carry_on": 1,
+        "checked": 2
+      },
+      "amenities": [
+        "meal"
+      ]
+    },
+    {
+      "flight_id": "GA521",
+      "airline": "Garuda Indonesia",
+      "airline_code": "GA",
+      "departure": {
+        "airport": "UPG",
+        "city": "Makassar",
+        "time": "2025-12-22T10:10:00+08:00",
+        "terminal": "I"
+      },
+      "arrival": {
+        "airport": "CGK",
+        "city": "Jakarta",
+        "time": "2025-12-22T11:25:00+07:00",
+        "terminal": "3"
+      },
+      "duration_minutes": 135,
+      "stops": 0,
+      "aircraft": "Boeing 737-800",
+      "price": {
+        "amount": 1290000,
+        "currency": "IDR"
+      },
+      "available_seats": 27,
+      "fare_class": "economy",
+      "baggage": {
+        "carry_on": 1,
+        "checked": 2
+      },
+      "amenities": [
+        "wifi",
+        "meal"
+      ]
     }
   ]
 }

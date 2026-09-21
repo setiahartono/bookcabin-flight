@@ -11,7 +11,6 @@ import (
 
 func TestAirAsiaSearchReturnsEveryRecordedFlight(t *testing.T) {
 	tests := []struct {
-		index        int
 		flightCode   string
 		fromAirport  string
 		toAirport    string
@@ -21,7 +20,6 @@ func TestAirAsiaSearchReturnsEveryRecordedFlight(t *testing.T) {
 		stops        []AirAsiaStop
 	}{
 		{
-			index:        0,
 			flightCode:   "QZ520",
 			fromAirport:  "CGK",
 			toAirport:    "DPS",
@@ -30,7 +28,6 @@ func TestAirAsiaSearchReturnsEveryRecordedFlight(t *testing.T) {
 			seats:        67,
 		},
 		{
-			index:        1,
 			flightCode:   "QZ524",
 			fromAirport:  "CGK",
 			toAirport:    "DPS",
@@ -39,7 +36,6 @@ func TestAirAsiaSearchReturnsEveryRecordedFlight(t *testing.T) {
 			seats:        54,
 		},
 		{
-			index:        2,
 			flightCode:   "QZ532",
 			fromAirport:  "CGK",
 			toAirport:    "DPS",
@@ -48,13 +44,101 @@ func TestAirAsiaSearchReturnsEveryRecordedFlight(t *testing.T) {
 			seats:        72,
 		},
 		{
-			index:       3,
 			flightCode:  "QZ7250",
 			fromAirport: "CGK",
 			toAirport:   "DPS",
 			priceIDR:    485000,
 			seats:       88,
 			stops:       []AirAsiaStop{{Airport: "SOC", WaitTimeMinutes: 95}},
+		}, {
+			flightCode:   "QZ840",
+			fromAirport:  "CGK",
+			toAirport:    "UPG",
+			directFlight: true,
+			priceIDR:     780000,
+			seats:        64,
+			stops:        nil,
+		},
+		{
+			flightCode:   "QZ844",
+			fromAirport:  "CGK",
+			toAirport:    "UPG",
+			directFlight: false,
+			priceIDR:     690000,
+			seats:        48,
+			stops:        []AirAsiaStop{{Airport: "SUB", WaitTimeMinutes: 70}},
+		},
+		{
+			flightCode:   "QZ970",
+			fromAirport:  "CGK",
+			toAirport:    "DJJ",
+			directFlight: true,
+			priceIDR:     1450000,
+			seats:        36,
+			stops:        nil,
+		},
+		{
+			flightCode:   "QZ974",
+			fromAirport:  "CGK",
+			toAirport:    "DJJ",
+			directFlight: false,
+			priceIDR:     1290000,
+			seats:        52,
+			stops:        []AirAsiaStop{{Airport: "UPG", WaitTimeMinutes: 85}},
+		},
+		{
+			flightCode:   "QZ521",
+			fromAirport:  "DPS",
+			toAirport:    "CGK",
+			directFlight: true,
+			priceIDR:     620000,
+			seats:        71,
+			stops:        nil,
+		},
+		{
+			flightCode:   "QZ525",
+			fromAirport:  "DPS",
+			toAirport:    "CGK",
+			directFlight: false,
+			priceIDR:     585000,
+			seats:        44,
+			stops:        []AirAsiaStop{{Airport: "SUB", WaitTimeMinutes: 95}},
+		},
+		{
+			flightCode:   "QZ529",
+			fromAirport:  "DPS",
+			toAirport:    "CGK",
+			directFlight: true,
+			priceIDR:     640000,
+			seats:        58,
+			stops:        nil,
+		},
+		{
+			flightCode:   "QZ841",
+			fromAirport:  "UPG",
+			toAirport:    "CGK",
+			directFlight: true,
+			priceIDR:     700000,
+			seats:        62,
+			stops:        nil,
+		},
+		{
+			flightCode:   "QZ845",
+			fromAirport:  "UPG",
+			toAirport:    "CGK",
+			directFlight: false,
+			priceIDR:     665000,
+			seats:        39,
+			stops:        []AirAsiaStop{{Airport: "SUB", WaitTimeMinutes: 80}},
+		},
+		{
+			flightCode:   "QZ849",
+			fromAirport:  "UPG",
+			toAirport:    "CGK",
+			directFlight: true,
+			priceIDR:     720000,
+			seats:        55,
+			stops:        nil,
 		},
 	}
 
@@ -82,9 +166,17 @@ func TestAirAsiaSearchReturnsEveryRecordedFlight(t *testing.T) {
 		t.Fatalf("len(Search()) = %d, want %d", got, want)
 	}
 
+	byID := make(map[string]FlightData, len(flights))
+	for _, flight := range flights {
+		byID[flight.FlightNumber] = flight
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.flightCode, func(t *testing.T) {
-			flight := flights[tt.index]
+			flight, ok := byID[tt.flightCode]
+			if !ok {
+				t.Fatalf("Search() answered no flight %q", tt.flightCode)
+			}
 
 			if got := flight.Id; got != tt.flightCode+"_AirAsia" {
 				t.Errorf("Id = %q, want %q", got, tt.flightCode+"_AirAsia")

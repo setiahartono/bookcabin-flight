@@ -8,7 +8,6 @@ import (
 
 func TestLionAirSearchReturnsEveryRecordedFlight(t *testing.T) {
 	tests := []struct {
-		index              int
 		id                 string
 		origin             string
 		destination        string
@@ -20,29 +19,28 @@ func TestLionAirSearchReturnsEveryRecordedFlight(t *testing.T) {
 		arrivalTimestamp   int64
 	}{
 		{
-			index:              0,
 			id:                 "JT740",
 			origin:             "CGK",
 			destination:        "DPS",
 			durationFormatted:  "1h 45m",
+			stops:              0,
 			priceIDR:           950000,
 			seats:              45,
 			departureTimestamp: 1765751400,
 			arrivalTimestamp:   1765757700,
 		},
 		{
-			index:              1,
 			id:                 "JT742",
 			origin:             "CGK",
 			destination:        "DPS",
 			durationFormatted:  "1h 50m",
+			stops:              0,
 			priceIDR:           890000,
 			seats:              38,
 			departureTimestamp: 1765773900,
 			arrivalTimestamp:   1765780500,
 		},
 		{
-			index:              2,
 			id:                 "JT650",
 			origin:             "CGK",
 			destination:        "DPS",
@@ -52,6 +50,116 @@ func TestLionAirSearchReturnsEveryRecordedFlight(t *testing.T) {
 			seats:              52,
 			departureTimestamp: 1765790400,
 			arrivalTimestamp:   1765804200,
+		},
+		{
+			id:                 "JT780",
+			origin:             "CGK",
+			destination:        "UPG",
+			durationFormatted:  "2h 15m",
+			stops:              0,
+			priceIDR:           760000,
+			seats:              51,
+			departureTimestamp: 1765761600,
+			arrivalTimestamp:   1765769700,
+		},
+		{
+			id:                 "JT784",
+			origin:             "CGK",
+			destination:        "UPG",
+			durationFormatted:  "4h 45m",
+			stops:              1,
+			priceIDR:           640000,
+			seats:              38,
+			departureTimestamp: 1765780800,
+			arrivalTimestamp:   1765797900,
+		},
+		{
+			id:                 "JT920",
+			origin:             "CGK",
+			destination:        "DJJ",
+			durationFormatted:  "4h 55m",
+			stops:              0,
+			priceIDR:           1420000,
+			seats:              29,
+			departureTimestamp: 1765754100,
+			arrivalTimestamp:   1765771800,
+		},
+		{
+			id:                 "JT924",
+			origin:             "CGK",
+			destination:        "DJJ",
+			durationFormatted:  "5h 55m",
+			stops:              1,
+			priceIDR:           1280000,
+			seats:              34,
+			departureTimestamp: 1765787400,
+			arrivalTimestamp:   1765808700,
+		},
+		{
+			id:                 "JT741",
+			origin:             "DPS",
+			destination:        "CGK",
+			durationFormatted:  "1h 55m",
+			stops:              0,
+			priceIDR:           600000,
+			seats:              56,
+			departureTimestamp: 1766194800,
+			arrivalTimestamp:   1766201700,
+		},
+		{
+			id:                 "JT745",
+			origin:             "DPS",
+			destination:        "CGK",
+			durationFormatted:  "4h 25m",
+			stops:              1,
+			priceIDR:           560000,
+			seats:              43,
+			departureTimestamp: 1766218800,
+			arrivalTimestamp:   1766234700,
+		},
+		{
+			id:                 "JT749",
+			origin:             "DPS",
+			destination:        "CGK",
+			durationFormatted:  "1h 55m",
+			stops:              0,
+			priceIDR:           615000,
+			seats:              49,
+			departureTimestamp: 1766358300,
+			arrivalTimestamp:   1766365200,
+		},
+		{
+			id:                 "JT781",
+			origin:             "UPG",
+			destination:        "CGK",
+			durationFormatted:  "2h 15m",
+			stops:              0,
+			priceIDR:           690000,
+			seats:              47,
+			departureTimestamp: 1766204700,
+			arrivalTimestamp:   1766212800,
+		},
+		{
+			id:                 "JT785",
+			origin:             "UPG",
+			destination:        "CGK",
+			durationFormatted:  "4h 25m",
+			stops:              1,
+			priceIDR:           650000,
+			seats:              40,
+			departureTimestamp: 1766227800,
+			arrivalTimestamp:   1766243700,
+		},
+		{
+			id:                 "JT789",
+			origin:             "UPG",
+			destination:        "CGK",
+			durationFormatted:  "2h 15m",
+			stops:              0,
+			priceIDR:           705000,
+			seats:              44,
+			departureTimestamp: 1766369400,
+			arrivalTimestamp:   1766377500,
 		},
 	}
 
@@ -69,9 +177,17 @@ func TestLionAirSearchReturnsEveryRecordedFlight(t *testing.T) {
 		t.Fatalf("len(Search()) = %d, want %d", got, want)
 	}
 
+	byID := make(map[string]FlightData, len(flights))
+	for _, flight := range flights {
+		byID[flight.FlightNumber] = flight
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.id, func(t *testing.T) {
-			flight := flights[tt.index]
+			flight, ok := byID[tt.id]
+			if !ok {
+				t.Fatalf("Search() answered no flight %q", tt.id)
+			}
 
 			if got := flight.Id; got != tt.id+"_Lion Air" {
 				t.Errorf("Id = %q, want %q", got, tt.id+"_Lion Air")

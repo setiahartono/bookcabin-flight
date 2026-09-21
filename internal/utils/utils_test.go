@@ -12,6 +12,7 @@ func TestAirportCity(t *testing.T) {
 		{name: "CGK", code: "CGK", wantCity: "Jakarta", wantOK: true},
 		{name: "DPS", code: "DPS", wantCity: "Denpasar", wantOK: true},
 		{name: "SUB", code: "SUB", wantCity: "Surabaya", wantOK: true},
+		{name: "DJJ", code: "DJJ", wantCity: "Jayapura", wantOK: true},
 		{name: "lower case", code: "cgk", wantCity: "Jakarta", wantOK: true},
 		{name: "unknown code", code: "XXX", wantCity: "", wantOK: false},
 	}

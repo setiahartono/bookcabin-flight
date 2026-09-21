@@ -153,7 +153,10 @@ The sample response below shows why the fare alone does not decide: the 485000 f
 ## What's Included
 - The API
 - Test Cases
-- Test Data
+- Test Data: the recorded provider responses under [`data/`](data) hold `CGK` to `DPS`, `CGK` to
+  `UPG` and `CGK` to `DJJ` on `2025-12-15`, and the way back `DPS` to `CGK` and `UPG` to `CGK` on
+  `2025-12-20` and `2025-12-22`. A route, date or cabin class the mock does not hold answers with an
+  empty `flights` list rather than an error.
 
 ## What's Not Included
 - Database Connection
