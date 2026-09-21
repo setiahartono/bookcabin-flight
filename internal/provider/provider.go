@@ -19,6 +19,13 @@ var ErrUnavailable = errors.New("provider unavailable")
 // does not have to wait for the simulated call again, or fail it again.
 const CacheTTL = 10 * time.Second
 
+// maxAttempts is how many times a provider runs its simulated call before it
+// reports the failure, and retryBackoff is how long it waits between two of them.
+const (
+	maxAttempts  = 3
+	retryBackoff = 50 * time.Millisecond
+)
+
 type SearchRequest struct {
 	Origin        string
 	Destination   string
@@ -50,14 +57,14 @@ func newProviderService(name, fixture string) (*providerService, error) {
 // simulated call it is given and keeps what that answered, so a repeated search
 // needs neither the latency nor the failure chance of the provider again.
 // Only an answer is kept, a failed call is asked for again on the next search.
-func (s *providerService) search(req SearchRequest, call func() ([]FlightData, error)) ([]FlightData, bool, error) {
+func (s *providerService) search(ctx context.Context, req SearchRequest, call func() ([]FlightData, error)) ([]FlightData, bool, error) {
 	key := cacheKey(req)
 
 	if flights, ok := s.cache.Get(key); ok {
 		return flights, true, nil
 	}
 
-	flights, err := call()
+	flights, err := s.retry(ctx, call)
 	if err != nil {
 		return nil, false, err
 	}
@@ -65,6 +72,48 @@ func (s *providerService) search(req SearchRequest, call func() ([]FlightData, e
 	s.cache.Set(key, flights)
 
 	return flights, false, nil
+}
+
+// retry runs the simulated call of a provider and asks again while it answers that
+// it is unavailable: an outage is momentary, so the flights are worth asking for
+// once more. Every other error is reported as it is, and so is a call that has
+// used up its attempts.
+func (s *providerService) retry(ctx context.Context, call func() ([]FlightData, error)) ([]FlightData, error) {
+	var lastErr error
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		flights, err := call()
+		if err == nil {
+			return flights, nil
+		}
+
+		if !errors.Is(err, ErrUnavailable) {
+			return nil, err
+		}
+
+		lastErr = err
+
+		if attempt == maxAttempts {
+			break
+		}
+
+		if err := s.waitBeforeRetry(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, lastErr
+}
+
+// waitBeforeRetry pauses between two attempts, and gives up as soon as the search
+// itself is over.
+func (s *providerService) waitBeforeRetry(ctx context.Context) error {
+	select {
+	case <-time.After(retryBackoff):
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("%s: %w", s.name, ctx.Err())
+	}
 }
 
 // cacheKey names what the provider answered for a request: the route, the date,

@@ -166,7 +166,7 @@ func pieceCount(pieces int) string {
 }
 
 func (g *Garuda) Search(ctx context.Context, req SearchRequest) ([]FlightData, bool, error) {
-	return g.search(req, func() ([]FlightData, error) {
+	return g.search(ctx, req, func() ([]FlightData, error) {
 		if err := g.wait(ctx, garudaMinDelay, garudaMaxDelay); err != nil {
 			return nil, err
 		}

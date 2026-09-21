@@ -100,6 +100,10 @@ sequenceDiagram
 | Batik Air | 200–400 ms | — |
 | AirAsia | 50–150 ms | ~10% (`provider.ErrUnavailable`) |
 
+A provider that answers unavailable is asked again, up to 3 attempts (`provider.maxAttempts`) 50 ms apart (`provider.retryBackoff`)
+A momentary outage rarely reaches `providers_failed`. Any other error, such as an unreadable response, is reported straight away, and a search that is cancelled is
+not retried.
+
 Because the providers are queried in parallel, a search takes about as long as the slowest one
 (Batik Air, up to 400 ms) rather than the sum of all four.
 

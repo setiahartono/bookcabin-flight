@@ -119,7 +119,7 @@ func (a *AirAsia) Normalize(resp *AirAsiaResponse) []FlightData {
 }
 
 func (a *AirAsia) Search(ctx context.Context, req SearchRequest) ([]FlightData, bool, error) {
-	return a.search(req, func() ([]FlightData, error) {
+	return a.search(ctx, req, func() ([]FlightData, error) {
 		if err := a.wait(ctx, airAsiaMinDelay, airAsiaMaxDelay); err != nil {
 			return nil, err
 		}
