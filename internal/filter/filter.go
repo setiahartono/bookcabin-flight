@@ -12,9 +12,8 @@ type SearchCriteria struct {
 	DepartureDate string `json:"departure_date"`
 	Passengers    int    `json:"passengers"`
 	CabinClass    string `json:"cabin_class"`
-	// RoundTrip is request only: a search adds the way back when it is true, and
-	// the criteria echoed in a response never carries it.
-	RoundTrip *bool `json:"-"`
+	RoundTrip     *bool  `json:"round_trip"`
+	ReturnDate    string `json:"return_date"`
 }
 
 func FilterFlights(flights []provider.FlightData, criteria SearchCriteria) []provider.FlightData {

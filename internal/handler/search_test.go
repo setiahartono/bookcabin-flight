@@ -59,7 +59,7 @@ func assertCriteria(t *testing.T, got, want service.SearchCriteria) {
 func TestSearchMapsTheCamelCaseRequest(t *testing.T) {
 	searcher := &fakeSearcher{}
 
-	recorder := post(t, searcher, `{"origin":"CGK","destination":"DPS","departureDate":"2025-12-15","passengers":2,"cabinClass":"economy","roundTrip":true}`)
+	recorder := post(t, searcher, `{"origin":"CGK","destination":"DPS","departureDate":"2025-12-15","returnDate":"2025-12-20","passengers":2,"cabinClass":"economy","roundTrip":true}`)
 
 	if got, want := recorder.Code, http.StatusOK; got != want {
 		t.Fatalf("status = %d, want %d (body %s)", got, want, recorder.Body)
@@ -72,6 +72,10 @@ func TestSearchMapsTheCamelCaseRequest(t *testing.T) {
 		Passengers:    2,
 		CabinClass:    "economy",
 	})
+
+	if got, want := searcher.criteria.ReturnDate, "2025-12-20"; got != want {
+		t.Errorf("criteria ReturnDate = %q, want %q", got, want)
+	}
 
 	if searcher.criteria.RoundTrip == nil {
 		t.Fatal("criteria RoundTrip = nil, want true")
@@ -117,7 +121,7 @@ func TestSearchWithoutRoundTripLeavesTheWayBackOut(t *testing.T) {
 func TestSearchIgnoresASnakeCaseRequest(t *testing.T) {
 	searcher := &fakeSearcher{}
 
-	recorder := post(t, searcher, `{"origin":"CGK","destination":"DPS","departure_date":"2025-12-15","passengers":1,"cabin_class":"economy"}`)
+	recorder := post(t, searcher, `{"origin":"CGK","destination":"DPS","departure_date":"2025-12-15","return_date":"2025-12-20","passengers":1,"cabin_class":"economy"}`)
 
 	if got, want := recorder.Code, http.StatusOK; got != want {
 		t.Fatalf("status = %d, want %d", got, want)
@@ -127,6 +131,9 @@ func TestSearchIgnoresASnakeCaseRequest(t *testing.T) {
 	// and the search service answers with invalid criteria.
 	if searcher.criteria.DepartureDate != "" {
 		t.Errorf("criteria DepartureDate = %q, want the snake_case key ignored", searcher.criteria.DepartureDate)
+	}
+	if searcher.criteria.ReturnDate != "" {
+		t.Errorf("criteria ReturnDate = %q, want the snake_case key ignored", searcher.criteria.ReturnDate)
 	}
 	if searcher.criteria.CabinClass != "" {
 		t.Errorf("criteria CabinClass = %q, want the snake_case key ignored", searcher.criteria.CabinClass)

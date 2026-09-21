@@ -155,14 +155,19 @@ The body of `POST /api/v1/search` is camelCase:
 | `origin` | string | departure airport code, e.g. `CGK` |
 | `destination` | string | arrival airport code, e.g. `DPS` |
 | `departureDate` | string | date of the trip, `YYYY-MM-DD`, mandatory |
+| `returnDate` | string | date of the way back, `YYYY-MM-DD`, mandatory when `roundTrip` is true |
 | `passengers` | int | travellers to seat |
 | `cabinClass` | string | e.g. `economy`, matched case insensitively |
-| `roundTrip` | bool, optional | accepted for the round trip search, which is not searched yet |
+| `roundTrip` | bool, optional | asks for the way back, which is not searched yet |
 
 The response keeps snake_case: `search_criteria` reports `departure_date` and `cabin_class`, and
 it never echoes `roundTrip`. Snake_case request keys are no longer read, so a body written with
 `departure_date` is answered with `400 invalid search criteria: departureDate ""`, which names the
 key the endpoint reads.
+
+`roundTrip` and `returnDate` are validated only: a round trip without `returnDate` is answered with
+`400 invalid search criteria: returnDate is mandatory when roundTrip is true`, and neither key
+changes the flights a search returns yet.
 
 ```bash
 curl -s localhost:8080/api/v1/ping
@@ -203,4 +208,4 @@ come back and `providers_failed` reports it.
 ```
 
 Errors are JSON as well, `{"error": "<message>"}`: `400` for an unreadable body or invalid criteria
-(for example a missing or malformed `departureDate`), `500` for anything unexpected.
+(for example a missing or malformed `departureDate`, or a round trip without a `returnDate`), `500` for anything unexpected.

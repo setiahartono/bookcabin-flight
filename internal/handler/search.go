@@ -29,6 +29,7 @@ type searchRequest struct {
 	Origin        string `json:"origin"`
 	Destination   string `json:"destination"`
 	DepartureDate string `json:"departureDate"`
+	ReturnDate    string `json:"returnDate"`
 	Passengers    int    `json:"passengers"`
 	CabinClass    string `json:"cabinClass"`
 	RoundTrip     *bool  `json:"roundTrip"`
@@ -39,6 +40,7 @@ func (r searchRequest) criteria() service.SearchCriteria {
 		Origin:        r.Origin,
 		Destination:   r.Destination,
 		DepartureDate: r.DepartureDate,
+		ReturnDate:    r.ReturnDate,
 		Passengers:    r.Passengers,
 		CabinClass:    r.CabinClass,
 		RoundTrip:     r.RoundTrip,

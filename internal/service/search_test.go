@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -218,3 +219,58 @@ func TestSearchRejectsAnInvalidDepartureDate(t *testing.T) {
 		t.Errorf("providers queried %d times, want 0", got)
 	}
 }
+
+func TestSearchNeedsAReturnDateForARoundTrip(t *testing.T) {
+	tests := []struct {
+		name       string
+		roundTrip  *bool
+		returnDate string
+		wantError  bool
+	}{
+		{name: "round trip without a return date", roundTrip: boolPtr(true), wantError: true},
+		{name: "round trip with a return date", roundTrip: boolPtr(true), returnDate: "2025-12-20"},
+		{name: "one way without a return date", roundTrip: boolPtr(false)},
+		{name: "one way with a return date", returnDate: "2025-12-20"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			searcher := &fakeProvider{flights: recordedFlights(t)}
+
+			criteria := criteria()
+			criteria.RoundTrip = tt.roundTrip
+			criteria.ReturnDate = tt.returnDate
+
+			result, err := newService(searcher).Search(context.Background(), criteria)
+
+			if tt.wantError {
+				if !errors.Is(err, ErrInvalidCriteria) {
+					t.Fatalf("Search() error = %v, want %v", err, ErrInvalidCriteria)
+				}
+				if !strings.Contains(err.Error(), "returnDate") {
+					t.Errorf("Search() error = %v, want it to name returnDate", err)
+				}
+				if got := len(searcher.requests); got != 0 {
+					t.Errorf("providers queried %d times, want 0", got)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Search() error = %v, want nil", err)
+			}
+
+			// The way back is not searched yet, so a round trip still costs one
+			// search and answers with the flights of the outbound trip.
+			if got, want := len(searcher.requests), 1; got != want {
+				t.Errorf("providers queried %d times, want %d", got, want)
+			}
+			if got, want := result.Metadata.TotalResults, 2; got != want {
+				t.Errorf("TotalResults = %d, want %d", got, want)
+			}
+		})
+	}
+}
+
+func boolPtr(value bool) *bool { return &value }

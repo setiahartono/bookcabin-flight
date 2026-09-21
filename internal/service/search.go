@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"bookcabin-flight/internal/aggregator"
@@ -20,6 +21,7 @@ type SearchResult struct {
 	SearchCriteria SearchCriteria        `json:"search_criteria"`
 	Metadata       metadata              `json:"metadata"`
 	Flights        []provider.FlightData `json:"flights"`
+	ReturnFlights  []provider.FlightData `json:"return_flights"`
 }
 
 type metadata struct {
@@ -78,37 +80,110 @@ func failureCount(err error) int {
 	return 1
 }
 
+func (s *SearchService) processFlightData(ctx context.Context, req provider.SearchRequest, criteria SearchCriteria) ([]provider.FlightData, error) {
+	flights, aggregateErr := s.aggregator.Aggregate(ctx, req)
+
+	// Only the flights that match the criteria take part in the scoring
+	filtered := filter.FilterFlights(flights, criteria)
+	ranked := scoring.Rank(filtered)
+
+	return ranked, aggregateErr
+}
+
 func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (SearchResult, error) {
 	start := time.Now()
 
 	departureDate, err := time.Parse(time.DateOnly, criteria.DepartureDate)
 	if err != nil {
-		return SearchResult{}, fmt.Errorf("%w: departureDate %q", ErrInvalidCriteria, criteria.DepartureDate)
+		return SearchResult{}, fmt.Errorf(
+			"%w: departureDate %q",
+			ErrInvalidCriteria,
+			criteria.DepartureDate,
+		)
 	}
 
-	flights, aggregateErr := s.aggregator.Aggregate(ctx, provider.SearchRequest{
+	if isRoundTrip(criteria) && criteria.ReturnDate == "" {
+		return SearchResult{}, fmt.Errorf(
+			"%w: returnDate is mandatory when roundTrip is true",
+			ErrInvalidCriteria,
+		)
+	}
+
+	departureReq := provider.SearchRequest{
 		Origin:        criteria.Origin,
 		Destination:   criteria.Destination,
 		DepartureDate: departureDate,
 		Passengers:    criteria.Passengers,
 		CabinClass:    criteria.CabinClass,
-	})
+	}
 
-	// Only the flights that match the criteria take part in the scoring, and the
-	// result lists them best value first.
-	filtered := filter.FilterFlights(flights, criteria)
-	ranked := scoring.Rank(filtered)
+	var (
+		wg sync.WaitGroup
+
+		rankedDeparture []provider.FlightData
+		rankedReturn    []provider.FlightData
+		departureAggErr error
+		returnAggErr    error
+	)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		rankedDeparture, departureAggErr =
+			s.processFlightData(ctx, departureReq, criteria)
+	}()
+
+	if isRoundTrip(criteria) {
+		returnDate, err := time.Parse(time.DateOnly, criteria.ReturnDate)
+		if err != nil {
+			return SearchResult{}, fmt.Errorf(
+				"%w: returnDate %q",
+				ErrInvalidCriteria,
+				criteria.ReturnDate,
+			)
+		}
+
+		returnReq := provider.SearchRequest{
+			Origin:        criteria.Destination,
+			Destination:   criteria.Origin,
+			DepartureDate: returnDate,
+			Passengers:    criteria.Passengers,
+			CabinClass:    criteria.CabinClass,
+		}
+		returnCriteria := criteria
+		returnCriteria.Origin = criteria.Destination
+		returnCriteria.Destination = criteria.Origin
+		returnCriteria.DepartureDate = criteria.ReturnDate
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			rankedReturn, returnAggErr =
+				s.processFlightData(ctx, returnReq, returnCriteria)
+		}()
+	}
+
+	wg.Wait()
 
 	result := SearchResult{
 		SearchCriteria: criteria,
-		Flights:        ranked,
+		Flights:        rankedDeparture,
+		ReturnFlights:  rankedReturn,
 		Metadata: metadata{
-			TotalResults:     len(ranked),
+			TotalResults:     len(rankedDeparture),
 			ProvidersQueried: s.aggregator.Count(),
-			ProvidersFailed:  failureCount(aggregateErr),
-			SearchTimeMs:     int(time.Since(start).Milliseconds()),
+			ProvidersFailed: failureCount(departureAggErr) +
+				failureCount(returnAggErr),
+			SearchTimeMs: int(time.Since(start).Milliseconds()),
 		},
 	}
 
 	return result, nil
+}
+
+// isRoundTrip reports whether the client asked for the way back.
+func isRoundTrip(criteria SearchCriteria) bool {
+	return criteria.RoundTrip != nil && *criteria.RoundTrip
 }
