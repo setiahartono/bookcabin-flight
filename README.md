@@ -130,6 +130,33 @@ trip have to be kept before it counts. Only an answer is kept, which means a pro
 asked again on the next search, and another route, another date, another cabin class or a restart
 asks the providers again.
 
+### Logging
+
+Every request is written to the access log, which goes to **stdout** and to `logs/access.log`:
+
+```text
+2025-12-15 10:00:00 remote=192.0.2.1 method=POST path=/api/v1/search status=200 bytes=4213 duration_ms=274
+```
+
+A request that answers `400`, `429` or `500` is written to `logs/error.log` as well, with the body it
+answered with:
+
+```text
+2025-12-15 10:00:01 remote=192.0.2.1 method=POST path=/api/v1/search status=400 duration_ms=0 error="{\"error\":\"invalid search criteria\"}"
+```
+
+A provider that could not answer a search, after its own retries, goes to a log of its own,
+`logs/provider.log`, so a provider outage stays out of the request errors:
+
+```text
+2025-12-15 10:00:02 provider=Batik Air route=CGK-DPS departure_date=2025-12-15 error="Batik Air: provider unavailable"
+```
+
+The logs live in a `logs` directory of the working directory, or wherever `LOG_DIR` points
+(`LOG_DIR=/var/log/bookcabin go run .`). The directory is created when it is missing and the files are
+appended to, so they survive a restart. Nothing rotates them. The address in a line is the one a proxy
+forwarded when there is a proxy in front, and the connection address otherwise.
+
 ### Best Value Scoring
 
 The flights that survive the filter are scored by best value in

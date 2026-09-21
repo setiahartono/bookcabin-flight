@@ -21,11 +21,14 @@ import (
 // answer came from.
 type fakeProvider struct {
 	mu       sync.Mutex
+	name     string
 	flights  []provider.FlightData
 	err      error
 	cached   bool
 	requests []provider.SearchRequest
 }
+
+func (f *fakeProvider) Name() string { return f.name }
 
 func (f *fakeProvider) Search(_ context.Context, req provider.SearchRequest) ([]provider.FlightData, bool, error) {
 	f.mu.Lock()
@@ -97,7 +100,7 @@ func recordedFlights(t *testing.T) []provider.FlightData {
 func TestSearchReturnsTheFlightsBestValueFirst(t *testing.T) {
 	searcher := &fakeProvider{flights: recordedFlights(t)}
 
-	result, err := newService(searcher).Search(context.Background(), criteria())
+	result, err := newService(nil, searcher).Search(context.Background(), criteria())
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -135,7 +138,7 @@ func TestSearchReturnsTheFlightsBestValueFirst(t *testing.T) {
 func TestSearchScoresTheFlightsItReturns(t *testing.T) {
 	searcher := &fakeProvider{flights: recordedFlights(t)}
 
-	result, err := newService(searcher).Search(context.Background(), criteria())
+	result, err := newService(nil, searcher).Search(context.Background(), criteria())
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -175,7 +178,7 @@ func TestSearchLeavesOutTheFlightsThatDoNotMatch(t *testing.T) {
 		newFlight(t, "GA404_Garuda", "DPS", "CGK", 1400000, 110, 0),
 	}}
 
-	result, err := newService(searcher).Search(context.Background(), criteria())
+	result, err := newService(nil, searcher).Search(context.Background(), criteria())
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -189,7 +192,7 @@ func TestSearchLeavesOutTheFlightsThatDoNotMatch(t *testing.T) {
 func TestSearchReportsAFailedProviderWithoutFailing(t *testing.T) {
 	searcher := &fakeProvider{err: provider.ErrUnavailable}
 
-	result, err := newService(searcher).Search(context.Background(), criteria())
+	result, err := newService(nil, searcher).Search(context.Background(), criteria())
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil so a failed provider only shows in the metadata", err)
 	}
@@ -208,7 +211,7 @@ func TestSearchReportsAFailedProviderWithoutFailing(t *testing.T) {
 func TestSearchWithoutFlights(t *testing.T) {
 	searcher := &fakeProvider{}
 
-	result, err := newService(searcher).Search(context.Background(), criteria())
+	result, err := newService(nil, searcher).Search(context.Background(), criteria())
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -227,7 +230,7 @@ func TestSearchRejectsAnInvalidDepartureDate(t *testing.T) {
 	invalid := criteria()
 	invalid.DepartureDate = ""
 
-	if _, err := newService(searcher).Search(context.Background(), invalid); !errors.Is(err, ErrInvalidCriteria) {
+	if _, err := newService(nil, searcher).Search(context.Background(), invalid); !errors.Is(err, ErrInvalidCriteria) {
 		t.Errorf("Search() error = %v, want %v", err, ErrInvalidCriteria)
 	}
 	if got := len(searcher.requestsSeen()); got != 0 {
@@ -256,7 +259,7 @@ func TestSearchNeedsAReturnDateForARoundTrip(t *testing.T) {
 			criteria.RoundTrip = tt.roundTrip
 			criteria.ReturnDate = tt.returnDate
 
-			result, err := newService(searcher).Search(context.Background(), criteria)
+			result, err := newService(nil, searcher).Search(context.Background(), criteria)
 
 			if tt.wantError {
 				if !errors.Is(err, ErrInvalidCriteria) {
@@ -305,7 +308,7 @@ func TestSearchReportsACacheHitFromTheProviders(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			searcher := &fakeProvider{flights: recordedFlights(t), cached: tt.cached}
 
-			result, err := newService(searcher).Search(context.Background(), criteria())
+			result, err := newService(nil, searcher).Search(context.Background(), criteria())
 			if err != nil {
 				t.Fatalf("Search() error = %v, want nil", err)
 			}
@@ -347,7 +350,7 @@ func TestSearchReportsACacheHitOnlyWhenEveryLegWasKept(t *testing.T) {
 			trip.RoundTrip = boolPtr(true)
 			trip.ReturnDate = "2025-12-20"
 
-			result, err := newService(searcher).Search(context.Background(), trip)
+			result, err := newService(nil, searcher).Search(context.Background(), trip)
 			if err != nil {
 				t.Fatalf("Search() error = %v, want nil", err)
 			}
@@ -362,9 +365,12 @@ func TestSearchReportsACacheHitOnlyWhenEveryLegWasKept(t *testing.T) {
 // the way a provider holding a fixture per route would, and reports whether that
 // direction could be answered from what it had kept.
 type routeProvider struct {
+	name      string
 	routes    map[string][]provider.FlightData
 	fromCache map[string]bool
 }
+
+func (p *routeProvider) Name() string { return p.name }
 
 func (p *routeProvider) Search(_ context.Context, req provider.SearchRequest) ([]provider.FlightData, bool, error) {
 	route := req.Origin + "-" + req.Destination
@@ -385,7 +391,7 @@ func TestSearchCountsTheWayBackInTheMetadata(t *testing.T) {
 	trip.RoundTrip = boolPtr(true)
 	trip.ReturnDate = "2025-12-20"
 
-	result, err := newService(searcher).Search(context.Background(), trip)
+	result, err := newService(nil, searcher).Search(context.Background(), trip)
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -405,3 +411,41 @@ func TestSearchCountsTheWayBackInTheMetadata(t *testing.T) {
 }
 
 func boolPtr(value bool) *bool { return &value }
+
+// failureRecorder keeps the provider failures the service reported.
+type failureRecorder struct {
+	mu       sync.Mutex
+	failures []string
+}
+
+func (r *failureRecorder) ProviderFailed(provider, origin, destination string, _ time.Time, _ error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.failures = append(r.failures, provider+" "+origin+"-"+destination)
+}
+
+func (r *failureRecorder) reported() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return slices.Clone(r.failures)
+}
+
+func TestSearchReportsAFailedProvider(t *testing.T) {
+	recorder := &failureRecorder{}
+	searcher := &fakeProvider{name: "Batik Air", err: provider.ErrUnavailable}
+
+	result, err := newService(recorder, searcher).Search(context.Background(), criteria())
+	if err != nil {
+		t.Fatalf("Search() error = %v, want nil so a failed provider only shows in the metadata", err)
+	}
+	if got, want := result.Metadata.ProvidersFailed, 1; got != want {
+		t.Errorf("ProvidersFailed = %d, want %d", got, want)
+	}
+
+	reported := recorder.reported()
+	if len(reported) != 1 || reported[0] != "Batik Air CGK-DPS" {
+		t.Errorf("reported failures = %v, want the provider that failed with the route it was asked for", reported)
+	}
+}

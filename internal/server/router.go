@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"bookcabin-flight/internal/handler"
+	"bookcabin-flight/internal/logging"
 	"bookcabin-flight/internal/ratelimit"
 	"bookcabin-flight/internal/service"
 )
@@ -16,15 +17,16 @@ const (
 	searchWindow = 5 * time.Second
 )
 
-// Handle Routes
-func NewRouter() http.Handler {
+// NewRouter routes the API and writes what every request did to the log it is
+// given, failed requests included.
+func NewRouter(logger *logging.Logger) http.Handler {
 	mux := http.NewServeMux()
 
-	searchHandler := handler.NewSearchHandler(service.NewSearchService())
+	searchHandler := handler.NewSearchHandler(service.NewSearchService(logger))
 	searches := ratelimit.New(searchLimit, searchWindow)
 
 	mux.HandleFunc("GET /api/v1/ping", handler.Ping)
 	mux.Handle("POST /api/v1/search", searches.Middleware(http.HandlerFunc(searchHandler.Search)))
 
-	return mux
+	return logger.Middleware(mux)
 }

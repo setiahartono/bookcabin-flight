@@ -7,6 +7,15 @@ import (
 
 func Run(addr string, handler http.Handler) error {
 	log.Printf("Server is starting on port %s", addr)
+	log.Printf(`
+
+██████   ██████   ██████  ██   ██  ██████  █████  ██████  ██ ███    ██ 
+██   ██ ██    ██ ██    ██ ██  ██  ██      ██   ██ ██   ██ ██ ████   ██ 
+██████  ██    ██ ██    ██ █████   ██      ███████ ██████  ██ ██ ██  ██ 
+██   ██ ██    ██ ██    ██ ██  ██  ██      ██   ██ ██   ██ ██ ██  ██ ██ 
+██████   ██████   ██████  ██   ██  ██████ ██   ██ ██████  ██ ██   ████   
+
+`)
 
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		return err

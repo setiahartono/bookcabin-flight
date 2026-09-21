@@ -55,15 +55,15 @@ func loadProviders() []aggregator.Searcher {
 	return searchers
 }
 
-func NewSearchService() *SearchService {
-	return newService(loadProviders()...)
+func NewSearchService(failures aggregator.Failures) *SearchService {
+	return newService(failures, loadProviders()...)
 }
 
-// newService wires the aggregator over the given searchers, which lets the
-// service tests query providers of their own.
-func newService(searchers ...aggregator.Searcher) *SearchService {
+// newService wires the aggregator over the given searchers and failure log, which
+// lets the service tests query providers of their own.
+func newService(failures aggregator.Failures, searchers ...aggregator.Searcher) *SearchService {
 	return &SearchService{
-		aggregator: aggregator.New(searchers...),
+		aggregator: aggregator.New(failures, searchers...),
 	}
 }
 

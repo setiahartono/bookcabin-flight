@@ -1,10 +1,13 @@
 package server
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"bookcabin-flight/internal/logging"
 )
 
 const searchBody = `{"origin":"CGK","destination":"DPS","departureDate":"2025-12-15","passengers":1,"cabinClass":"economy"}`
@@ -20,7 +23,7 @@ func postSearch(handler http.Handler) int {
 }
 
 func TestSearchRouteIsRateLimited(t *testing.T) {
-	handler := NewRouter()
+	handler := NewRouter(logging.New(io.Discard, io.Discard, io.Discard))
 
 	tests := []struct {
 		name       string
@@ -42,7 +45,7 @@ func TestSearchRouteIsRateLimited(t *testing.T) {
 }
 
 func TestPingIsNotRateLimited(t *testing.T) {
-	handler := NewRouter()
+	handler := NewRouter(logging.New(io.Discard, io.Discard, io.Discard))
 
 	for request := 1; request <= 5; request++ {
 		recorder := httptest.NewRecorder()

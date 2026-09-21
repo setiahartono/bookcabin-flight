@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"bookcabin-flight/internal/provider"
 )
@@ -14,16 +15,24 @@ import (
 // Providers that normalize their response, such as *provider.AirAsia, satisfy it as they are.
 type Searcher interface {
 	Search(ctx context.Context, req provider.SearchRequest) ([]provider.FlightData, bool, error)
+	Name() string
+}
+
+// Failures records the providers that could not answer a search.
+type Failures interface {
+	ProviderFailed(provider, origin, destination string, departureDate time.Time, err error)
 }
 
 // Aggregator collects the flight data answered by every searcher it holds.
 type Aggregator struct {
 	searchers []Searcher
+	failures  Failures
 }
 
-// New returns an Aggregator that queries the given searchers.
-func New(searchers ...Searcher) *Aggregator {
-	return &Aggregator{searchers: searchers}
+// New returns an Aggregator that queries the given searchers and reports the ones
+// that fail to the failure log, which may be left out.
+func New(failures Failures, searchers ...Searcher) *Aggregator {
+	return &Aggregator{searchers: searchers, failures: failures}
 }
 
 // Count returns how many searchers the aggregator queries.
@@ -56,6 +65,8 @@ func (a *Aggregator) Aggregate(ctx context.Context, req provider.SearchRequest) 
 				errs = append(errs, err)
 				mu.Unlock()
 
+				a.recordFailure(s, req, err)
+
 				return
 			}
 
@@ -83,4 +94,14 @@ func (a *Aggregator) Aggregate(ctx context.Context, req provider.SearchRequest) 
 	}
 
 	return flights, cacheHit, errors.Join(errs...)
+}
+
+// recordFailure writes a provider that could not answer a search to the failure
+// log, when the aggregator was given one.
+func (a *Aggregator) recordFailure(searcher Searcher, req provider.SearchRequest, err error) {
+	if a.failures == nil {
+		return
+	}
+
+	a.failures.ProviderFailed(searcher.Name(), req.Origin, req.Destination, req.DepartureDate, err)
 }

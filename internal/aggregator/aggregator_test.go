@@ -3,6 +3,8 @@ package aggregator
 import (
 	"context"
 	"errors"
+	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,12 +16,15 @@ var _ Searcher = (*provider.LionAir)(nil)
 var _ Searcher = (*provider.Garuda)(nil)
 
 type fakeSearcher struct {
+	name    string
 	flights []provider.FlightData
 	err     error
 	delay   time.Duration
 	cached  bool
 	calls   int
 }
+
+func (f *fakeSearcher) Name() string { return f.name }
 
 func (f *fakeSearcher) Search(ctx context.Context, _ provider.SearchRequest) ([]provider.FlightData, bool, error) {
 	if f.delay > 0 {
@@ -39,7 +44,7 @@ func TestSearchCollectsFlightsFromEverySearcher(t *testing.T) {
 	airAsia := &fakeSearcher{flights: []provider.FlightData{{Id: "QZ520_AirAsia"}, {Id: "QZ524_AirAsia"}}}
 	lionAir := &fakeSearcher{flights: []provider.FlightData{{Id: "JT740_Lion Air"}}}
 
-	got, _, err := New(airAsia, lionAir).Aggregate(context.Background(), provider.SearchRequest{})
+	got, _, err := New(nil, airAsia, lionAir).Aggregate(context.Background(), provider.SearchRequest{})
 	if err != nil {
 		t.Fatalf("Search() error = %v, want nil", err)
 	}
@@ -74,7 +79,7 @@ func TestSearchKeepsFlightsWhenASearcherFails(t *testing.T) {
 	airAsia := &fakeSearcher{flights: []provider.FlightData{{Id: "QZ520_AirAsia"}}}
 	batikAir := &fakeSearcher{err: unavailable}
 
-	got, _, err := New(airAsia, batikAir).Aggregate(context.Background(), provider.SearchRequest{})
+	got, _, err := New(nil, airAsia, batikAir).Aggregate(context.Background(), provider.SearchRequest{})
 
 	if !errors.Is(err, unavailable) {
 		t.Errorf("Search() error = %v, want %v", err, unavailable)
@@ -88,7 +93,7 @@ func TestSearchKeepsFlightsWhenASearcherFails(t *testing.T) {
 }
 
 func TestSearchWithoutSearchers(t *testing.T) {
-	got, _, err := New().Aggregate(context.Background(), provider.SearchRequest{})
+	got, _, err := New(nil).Aggregate(context.Background(), provider.SearchRequest{})
 
 	if err != nil {
 		t.Errorf("Search() error = %v, want nil", err)
@@ -103,7 +108,7 @@ func TestSearchQueriesSearchersInParallel(t *testing.T) {
 	second := &fakeSearcher{flights: []provider.FlightData{{Id: "JT740_Lion Air"}}, delay: 200 * time.Millisecond}
 
 	start := time.Now()
-	got, _, err := New(first, second).Aggregate(context.Background(), provider.SearchRequest{})
+	got, _, err := New(nil, first, second).Aggregate(context.Background(), provider.SearchRequest{})
 	elapsed := time.Since(start)
 
 	if err != nil {
@@ -123,7 +128,7 @@ func TestSearchPropagatesContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	got, _, err := New(airAsia).Aggregate(ctx, provider.SearchRequest{})
+	got, _, err := New(nil, airAsia).Aggregate(ctx, provider.SearchRequest{})
 
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("Search() error = %v, want context.Canceled", err)
@@ -150,7 +155,7 @@ func TestAggregateReportsACacheHitWhenEverySearcherAnsweredFromItsCache(t *testi
 	airAsia := &fakeSearcher{flights: []provider.FlightData{{Id: "QZ520_AirAsia"}}, cached: true}
 	lionAir := &fakeSearcher{flights: []provider.FlightData{{Id: "JT740_Lion Air"}}, cached: true}
 
-	flights, cacheHit, err := New(airAsia, lionAir).Aggregate(context.Background(), request("CGK", "DPS"))
+	flights, cacheHit, err := New(nil, airAsia, lionAir).Aggregate(context.Background(), request("CGK", "DPS"))
 	if err != nil {
 		t.Fatalf("Aggregate() error = %v, want nil", err)
 	}
@@ -166,11 +171,88 @@ func TestAggregateReportsNoCacheHitWhileASearcherStillAsks(t *testing.T) {
 	cached := &fakeSearcher{flights: []provider.FlightData{{Id: "QZ520_AirAsia"}}, cached: true}
 	asked := &fakeSearcher{flights: []provider.FlightData{{Id: "JT740_Lion Air"}}}
 
-	_, cacheHit, err := New(cached, asked).Aggregate(context.Background(), request("CGK", "DPS"))
+	_, cacheHit, err := New(nil, cached, asked).Aggregate(context.Background(), request("CGK", "DPS"))
 	if err != nil {
 		t.Fatalf("Aggregate() error = %v, want nil", err)
 	}
 	if cacheHit {
 		t.Error("Aggregate() cacheHit = true, want false while a searcher still asks its provider")
+	}
+}
+
+// recorded is a provider failure the aggregator reported.
+type recorded struct {
+	provider      string
+	origin        string
+	destination   string
+	departureDate time.Time
+	err           error
+}
+
+// failureRecorder keeps what the aggregator reported, the way the error log does.
+type failureRecorder struct {
+	mu       sync.Mutex
+	failures []recorded
+}
+
+func (r *failureRecorder) ProviderFailed(provider, origin, destination string, departureDate time.Time, err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.failures = append(r.failures, recorded{provider, origin, destination, departureDate, err})
+}
+
+func (r *failureRecorder) failed() []recorded {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return slices.Clone(r.failures)
+}
+
+func TestAggregateReportsAFailedProvider(t *testing.T) {
+	unavailable := errors.New("provider unavailable")
+	airAsia := &fakeSearcher{name: "AirAsia", flights: []provider.FlightData{{Id: "QZ520_AirAsia"}}}
+	batikAir := &fakeSearcher{name: "Batik Air", err: unavailable}
+	recorder := &failureRecorder{}
+
+	flights, _, err := New(recorder, airAsia, batikAir).Aggregate(context.Background(), request("CGK", "DPS"))
+	if !errors.Is(err, unavailable) {
+		t.Fatalf("Aggregate() error = %v, want %v", err, unavailable)
+	}
+	if len(flights) != 1 {
+		t.Fatalf("len(Aggregate()) = %d, want 1", len(flights))
+	}
+
+	failures := recorder.failed()
+	if len(failures) != 1 {
+		t.Fatalf("reported failures = %d, want 1 for the provider that failed", len(failures))
+	}
+
+	failure := failures[0]
+
+	if got, want := failure.provider, "Batik Air"; got != want {
+		t.Errorf("failure provider = %q, want %q", got, want)
+	}
+	if got, want := failure.origin+"-"+failure.destination, "CGK-DPS"; got != want {
+		t.Errorf("failure route = %q, want %q", got, want)
+	}
+	if got, want := failure.departureDate.Format(time.DateOnly), "2025-12-15"; got != want {
+		t.Errorf("failure departure date = %q, want %q", got, want)
+	}
+	if !errors.Is(failure.err, unavailable) {
+		t.Errorf("failure error = %v, want %v", failure.err, unavailable)
+	}
+}
+
+func TestAggregateReportsNoFailureWhenEverySearcherAnswers(t *testing.T) {
+	recorder := &failureRecorder{}
+	airAsia := &fakeSearcher{name: "AirAsia", flights: []provider.FlightData{{Id: "QZ520_AirAsia"}}}
+
+	if _, _, err := New(recorder, airAsia).Aggregate(context.Background(), request("CGK", "DPS")); err != nil {
+		t.Fatalf("Aggregate() error = %v, want nil", err)
+	}
+
+	if got := recorder.failed(); len(got) != 0 {
+		t.Errorf("reported failures = %v, want none when every provider answers", got)
 	}
 }
