@@ -172,7 +172,22 @@ go test ./...               # run the tests
 | Method | Path | Body |
 |---|---|---|
 | GET | `/api/v1/ping` | – |
-| POST | `/api/v1/search` | search criteria JSON |
+| POST | `/api/v1/search` | search criteria JSON, at most 3 requests per 5 seconds |
+
+### Rate limit
+
+`POST /api/v1/search` takes 3 requests per client in 5 seconds (`server.searchLimit` and
+`server.searchWindow` in [`internal/server`](internal/server)). What comes after that is answered with
+`429 Too Many Requests`, a `Retry-After` header saying how many seconds to wait, and the usual error
+body:
+
+```json
+{"error":"rate limit exceeded: 3 requests per 5s"}
+```
+
+A client is the address a request comes from: `X-Forwarded-For` when a proxy sets it, the address of
+the connection otherwise. `GET /api/v1/ping` is not limited, and the counters live in the process
+that answers the requests, so they start over when it restarts.
 
 ### Request
 
@@ -239,4 +254,4 @@ with `"cache_hit": true` instead, without asking a provider.
 ```
 
 Errors are JSON as well, `{"error": "<message>"}`: `400` for an unreadable body or invalid criteria
-(for example a missing or malformed `departureDate`, or a round trip without a `returnDate`), `500` for anything unexpected.
+(for example a missing or malformed `departureDate`, or a round trip without a `returnDate`), `429` for a client over its rate limit, `500` for anything unexpected.
