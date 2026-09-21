@@ -138,17 +138,17 @@ func travelTimeInMinutes(travelTime string) int {
 	return hours*60 + minutes
 }
 
-func (b *BatikAir) Search(ctx context.Context, _ SearchRequest) ([]FlightData, error) {
-	if err := b.wait(ctx, batikAirMinDelay, batikAirMaxDelay); err != nil {
-		return nil, err
-	}
+func (b *BatikAir) Search(ctx context.Context, req SearchRequest) ([]FlightData, bool, error) {
+	return b.search(req, func() ([]FlightData, error) {
+		if err := b.wait(ctx, batikAirMinDelay, batikAirMaxDelay); err != nil {
+			return nil, err
+		}
 
-	var resp BatikResponse
-	if err := b.decode(&resp); err != nil {
-		return nil, err
-	}
+		var resp BatikResponse
+		if err := b.decode(&resp); err != nil {
+			return nil, err
+		}
 
-	flightData := b.Normalize(&resp)
-
-	return flightData, nil
+		return b.Normalize(&resp), nil
+	})
 }

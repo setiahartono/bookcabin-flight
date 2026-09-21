@@ -8,6 +8,7 @@ import (
 	"math"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,17 +16,31 @@ import (
 )
 
 // fakeProvider answers every search with the flights it recorded and keeps the
-// requests it received.
+// requests it received. A round trip queries the two legs at the same time, so
+// what it records is guarded, and cached is what it reports about where its
+// answer came from.
 type fakeProvider struct {
+	mu       sync.Mutex
 	flights  []provider.FlightData
 	err      error
+	cached   bool
 	requests []provider.SearchRequest
 }
 
-func (f *fakeProvider) Search(_ context.Context, req provider.SearchRequest) ([]provider.FlightData, error) {
+func (f *fakeProvider) Search(_ context.Context, req provider.SearchRequest) ([]provider.FlightData, bool, error) {
+	f.mu.Lock()
 	f.requests = append(f.requests, req)
+	f.mu.Unlock()
 
-	return f.flights, f.err
+	return f.flights, f.cached, f.err
+}
+
+// requestsSeen returns the requests the fake received so far.
+func (f *fakeProvider) requestsSeen() []provider.SearchRequest {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	return slices.Clone(f.requests)
 }
 
 // newFlight builds a flight through its JSON form, since the nested types of
@@ -101,11 +116,11 @@ func TestSearchReturnsTheFlightsBestValueFirst(t *testing.T) {
 		t.Errorf("ProvidersFailed = %d, want 0", got)
 	}
 
-	if len(searcher.requests) != 1 {
-		t.Fatalf("provider queried %d times, want 1", len(searcher.requests))
+	if len(searcher.requestsSeen()) != 1 {
+		t.Fatalf("provider queried %d times, want 1", len(searcher.requestsSeen()))
 	}
 
-	request := searcher.requests[0]
+	request := searcher.requestsSeen()[0]
 	if request.Origin != "CGK" || request.Destination != "DPS" {
 		t.Errorf("provider searched %s-%s, want CGK-DPS", request.Origin, request.Destination)
 	}
@@ -215,7 +230,7 @@ func TestSearchRejectsAnInvalidDepartureDate(t *testing.T) {
 	if _, err := newService(searcher).Search(context.Background(), invalid); !errors.Is(err, ErrInvalidCriteria) {
 		t.Errorf("Search() error = %v, want %v", err, ErrInvalidCriteria)
 	}
-	if got := len(searcher.requests); got != 0 {
+	if got := len(searcher.requestsSeen()); got != 0 {
 		t.Errorf("providers queried %d times, want 0", got)
 	}
 }
@@ -250,7 +265,7 @@ func TestSearchNeedsAReturnDateForARoundTrip(t *testing.T) {
 				if !strings.Contains(err.Error(), "returnDate") {
 					t.Errorf("Search() error = %v, want it to name returnDate", err)
 				}
-				if got := len(searcher.requests); got != 0 {
+				if got := len(searcher.requestsSeen()); got != 0 {
 					t.Errorf("providers queried %d times, want 0", got)
 				}
 
@@ -261,15 +276,131 @@ func TestSearchNeedsAReturnDateForARoundTrip(t *testing.T) {
 				t.Fatalf("Search() error = %v, want nil", err)
 			}
 
-			// The way back is not searched yet, so a round trip still costs one
-			// search and answers with the flights of the outbound trip.
-			if got, want := len(searcher.requests), 1; got != want {
-				t.Errorf("providers queried %d times, want %d", got, want)
+			// A round trip searches both legs, a one way trip the outbound one only.
+			wantRequests := 1
+			if tt.roundTrip != nil && *tt.roundTrip {
+				wantRequests = 2
+			}
+
+			if got := len(searcher.requestsSeen()); got != wantRequests {
+				t.Errorf("providers queried %d times, want %d", got, wantRequests)
 			}
 			if got, want := result.Metadata.TotalResults, 2; got != want {
 				t.Errorf("TotalResults = %d, want %d", got, want)
 			}
 		})
+	}
+}
+
+func TestSearchReportsACacheHitFromTheProviders(t *testing.T) {
+	tests := []struct {
+		name   string
+		cached bool
+	}{
+		{name: "answered from what the provider kept", cached: true},
+		{name: "asked the provider", cached: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			searcher := &fakeProvider{flights: recordedFlights(t), cached: tt.cached}
+
+			result, err := newService(searcher).Search(context.Background(), criteria())
+			if err != nil {
+				t.Fatalf("Search() error = %v, want nil", err)
+			}
+			if got := result.Metadata.CacheHit; got != tt.cached {
+				t.Errorf("CacheHit = %v, want %v", got, tt.cached)
+			}
+		})
+	}
+}
+
+func TestSearchReportsACacheHitOnlyWhenEveryLegWasKept(t *testing.T) {
+	tests := []struct {
+		name      string
+		fromCache map[string]bool
+		want      bool
+	}{
+		{
+			name:      "both legs kept",
+			fromCache: map[string]bool{"CGK-DPS": true, "DPS-CGK": true},
+			want:      true,
+		},
+		{
+			name:      "the way back asked the providers",
+			fromCache: map[string]bool{"CGK-DPS": true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			searcher := &routeProvider{
+				routes: map[string][]provider.FlightData{
+					"CGK-DPS": {newFlight(t, "QZ520_AirAsia", "CGK", "DPS", 650000, 100, 0)},
+					"DPS-CGK": {newFlight(t, "QZ521_AirAsia", "DPS", "CGK", 700000, 110, 0)},
+				},
+				fromCache: tt.fromCache,
+			}
+
+			trip := criteria()
+			trip.RoundTrip = boolPtr(true)
+			trip.ReturnDate = "2025-12-20"
+
+			result, err := newService(searcher).Search(context.Background(), trip)
+			if err != nil {
+				t.Fatalf("Search() error = %v, want nil", err)
+			}
+			if got := result.Metadata.CacheHit; got != tt.want {
+				t.Errorf("CacheHit = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// routeProvider answers each leg with the flights it holds for that direction,
+// the way a provider holding a fixture per route would, and reports whether that
+// direction could be answered from what it had kept.
+type routeProvider struct {
+	routes    map[string][]provider.FlightData
+	fromCache map[string]bool
+}
+
+func (p *routeProvider) Search(_ context.Context, req provider.SearchRequest) ([]provider.FlightData, bool, error) {
+	route := req.Origin + "-" + req.Destination
+
+	return p.routes[route], p.fromCache[route], nil
+}
+
+func TestSearchCountsTheWayBackInTheMetadata(t *testing.T) {
+	returnFlight := newFlight(t, "QZ521_AirAsia", "DPS", "CGK", 700000, 110, 0)
+	returnFlight.Departure.Datetime = "2025-12-20T08:00:00+07:00"
+
+	searcher := &routeProvider{routes: map[string][]provider.FlightData{
+		"CGK-DPS": {newFlight(t, "QZ520_AirAsia", "CGK", "DPS", 650000, 100, 0)},
+		"DPS-CGK": {returnFlight},
+	}}
+
+	trip := criteria()
+	trip.RoundTrip = boolPtr(true)
+	trip.ReturnDate = "2025-12-20"
+
+	result, err := newService(searcher).Search(context.Background(), trip)
+	if err != nil {
+		t.Fatalf("Search() error = %v, want nil", err)
+	}
+
+	if got, want := flightIds(result.Flights), []string{"QZ520_AirAsia"}; !slices.Equal(got, want) {
+		t.Errorf("Flights = %v, want %v", got, want)
+	}
+	if got, want := flightIds(result.ReturnFlights), []string{"QZ521_AirAsia"}; !slices.Equal(got, want) {
+		t.Errorf("ReturnFlights = %v, want %v", got, want)
+	}
+	if got, want := result.Metadata.TotalResults, 2; got != want {
+		t.Errorf("TotalResults = %d, want %d, the flights of both legs", got, want)
+	}
+	if got, want := result.Metadata.ProvidersQueried, 1; got != want {
+		t.Errorf("ProvidersQueried = %d, want %d, the provider the search asks twice", got, want)
 	}
 }
 

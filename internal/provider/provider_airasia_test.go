@@ -66,7 +66,7 @@ func TestAirAsiaSearchReturnsEveryRecordedFlight(t *testing.T) {
 	var flights []FlightData
 
 	for range 10 {
-		flights, err = provider.Search(context.Background(), SearchRequest{})
+		flights, _, err = provider.Search(context.Background(), SearchRequest{})
 		if err == nil {
 			break
 		}

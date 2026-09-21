@@ -13,6 +13,8 @@ A simple API to simulate aggregation of flight data from various providers by mo
 - The calls are being run parallely by using Go Routines
 - Each provider will normalize the response body received to an uniformed format
 - The normalized responses of the providers are collected in the aggregation layer
+- Provider response for specific search criteria will be cached, asking it right away will give an outdated answer
+- Cache is set for 10 seconds for freshness sake
 - The aggregated data will then be filtered based on search criteria
 - The filtered flights are scored by best value, from the fare and how convenient the itinerary is
 - The final data is then passed from the Search Service to the handler
@@ -28,14 +30,16 @@ A simple API to simulate aggregation of flight data from various providers by mo
    │                      decode criteria · render JSON · {"error": "..."} when it fails
    ▼
  service.SearchService.Search                                    (internal/service)
-   │                      validate departureDate · build metadata
+   │                      validate departureDate · search the way back · build metadata
    ▼
  aggregator.Aggregator.Aggregate                                 (internal/aggregator)
    │                      one goroutine per provider, errors joined
    │      ┌───────────────┬───────────────┬───────────────┐
    ▼      ▼               ▼               ▼               ▼
  Garuda  Lion Air      Batik Air      AirAsia            (internal/provider)
- 50–100  100–200 ms    200–400 ms     50–150 ms          wait → maybeFail → decode
+ 50–100  100–200 ms    200–400 ms     50–150 ms
+   │      │               │               │              kept flights, or
+   │      │               │               │              wait → maybeFail → decode → keep
    │      │               │               │
    └──────┴───────────────┴───────────────┘
    │        Normalize(response) → uniform FlightData        (data.FS fixtures · utils)
@@ -46,7 +50,7 @@ A simple API to simulate aggregation of flight data from various providers by mo
  scoring.Rank(filtered)                                          (internal/scoring)
    │        best value first: 0.7 · price + 0.3 · convenience
    ▼
- SearchResult{ search_criteria, metadata, flights }
+ SearchResult{ search_criteria, metadata, flights, return_flights }
    │
    ▼
  client  ◀── 200 JSON
@@ -68,8 +72,9 @@ sequenceDiagram
     H->>S: Search(ctx, criteria)
     S->>S: parse departureDate (ErrInvalidCriteria on failure)
     S->>A: Aggregate(ctx, SearchRequest)
+    Note over P: a provider keeps what it answered for a minute,<br/>so a repeated search skips its latency and failure
     par one goroutine per provider
-        A->>P: Search(ctx, req) — wait 50–400ms, then maybe fail
+        A->>P: Search(ctx, req) — from the cache, or wait 50–400ms and maybe fail
         P->>P: decode fixture (data.FS) → Normalize → []FlightData
         P-->>A: flights, or the provider's error
     end
@@ -97,6 +102,29 @@ sequenceDiagram
 
 Because the providers are queried in parallel, a search takes about as long as the slowest one
 (Batik Air, up to 400 ms) rather than the sum of all four.
+
+### Metadata
+
+| Field | |
+|---|---|
+| `total_results` | flights reported, the way back included when the search is a round trip |
+| `providers_queried` | providers the search asks, the same four on a round trip |
+| `providers_failed` | provider failures, counted for each leg of the search |
+| `search_time_ms` | wall clock time of the search, both legs run at the same time |
+| `cache_hit` | `true` when every provider of every leg answered from what it had kept |
+
+### Caching
+
+A provider keeps the flights it answered in memory for a minute (`provider.CacheTTL`), keyed by the
+request it answers: route, departure date, travellers and cabin class. A search asking for the same
+again is answered from what that provider kept, without its latency and without its failure chance —
+the cache belongs to the provider, not to the layer that collects the providers.
+
+`metadata.cache_hit` reports a search that needed no provider call at all: it is `true` only when
+every provider of every leg the search covers answered from what it kept, so both legs of a round
+trip have to be kept before it counts. Only an answer is kept, which means a provider that failed is
+asked again on the next search, and another route, another date, another cabin class or a restart
+asks the providers again.
 
 ### Best Value Scoring
 
@@ -158,16 +186,17 @@ The body of `POST /api/v1/search` is camelCase:
 | `returnDate` | string | date of the way back, `YYYY-MM-DD`, mandatory when `roundTrip` is true |
 | `passengers` | int | travellers to seat |
 | `cabinClass` | string | e.g. `economy`, matched case insensitively |
-| `roundTrip` | bool, optional | asks for the way back, which is not searched yet |
+| `roundTrip` | bool, optional | asks for the way back as well, reported in `return_flights` |
 
-The response keeps snake_case: `search_criteria` reports `departure_date` and `cabin_class`, and
-it never echoes `roundTrip`. Snake_case request keys are no longer read, so a body written with
-`departure_date` is answered with `400 invalid search criteria: departureDate ""`, which names the
-key the endpoint reads.
+The response keeps snake_case: `search_criteria` echoes the criteria it applied as `departure_date`,
+`cabin_class`, `round_trip` and `return_date`. Snake_case request keys are no longer read, so a body
+written with `departure_date` is answered with `400 invalid search criteria: departureDate ""`,
+which names the key the endpoint reads.
 
-`roundTrip` and `returnDate` are validated only: a round trip without `returnDate` is answered with
-`400 invalid search criteria: returnDate is mandatory when roundTrip is true`, and neither key
-changes the flights a search returns yet.
+`roundTrip` asks for the way back as well: the way back is searched for the `returnDate`, on the same
+date as the outbound trip it searches back, and its flights are reported in `return_flights` while
+`flights` keeps the outbound leg. A round trip without `returnDate` is answered with
+`400 invalid search criteria: returnDate is mandatory when roundTrip is true`.
 
 ```bash
 curl -s localhost:8080/api/v1/ping
@@ -179,12 +208,13 @@ curl -s -X POST localhost:8080/api/v1/search \
 
 A search answers with the criteria it applied, the run metadata and the unified flights, best
 value first. This run had no provider fail; when one does, the flights of the other three still
-come back and `providers_failed` reports it.
+come back and `providers_failed` reports it. A search repeated within the cache lifetime is answered
+with `"cache_hit": true` instead, without asking a provider.
 
 ```json
 {
-  "search_criteria": {"origin": "CGK", "destination": "DPS", "departure_date": "2025-12-15", "passengers": 1, "cabin_class": "economy"},
-  "metadata": {"total_results": 9, "providers_queried": 4, "providers_failed": 0, "search_time_ms": 288, "cache_hit": false},
+  "search_criteria": {"origin": "CGK", "destination": "DPS", "departure_date": "2025-12-15", "passengers": 1, "cabin_class": "economy", "round_trip": null, "return_date": ""},
+  "metadata": {"total_results": 9, "providers_queried": 4, "providers_failed": 0, "search_time_ms": 304, "cache_hit": false},
   "flights": [
     {
       "id": "QZ532_AirAsia",
@@ -203,7 +233,8 @@ come back and `providers_failed` reports it.
       "baggage": {"carry_on": "Cabin baggage only", "checked": "additional fee"},
       "score": {"value": 0.87, "price": 0.815, "convenience": 1}
     }
-  ]
+  ],
+  "return_flights": null
 }
 ```
 

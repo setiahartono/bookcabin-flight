@@ -190,17 +190,17 @@ func lionTimestamp(datetime, timezone string) int64 {
 	return 0
 }
 
-func (l *LionAir) Search(ctx context.Context, _ SearchRequest) ([]FlightData, error) {
-	if err := l.wait(ctx, lionAirMinDelay, lionAirMaxDelay); err != nil {
-		return nil, err
-	}
+func (l *LionAir) Search(ctx context.Context, req SearchRequest) ([]FlightData, bool, error) {
+	return l.search(req, func() ([]FlightData, error) {
+		if err := l.wait(ctx, lionAirMinDelay, lionAirMaxDelay); err != nil {
+			return nil, err
+		}
 
-	var resp LionResponse
-	if err := l.decode(&resp); err != nil {
-		return nil, err
-	}
+		var resp LionResponse
+		if err := l.decode(&resp); err != nil {
+			return nil, err
+		}
 
-	flightData := l.Normalize(&resp)
-
-	return flightData, nil
+		return l.Normalize(&resp), nil
+	})
 }

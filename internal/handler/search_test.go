@@ -202,7 +202,7 @@ func TestSearchRendersTheCriteriaInSnakeCase(t *testing.T) {
 
 	got := slices.Sorted(maps.Keys(body.SearchCriteria))
 
-	want := []string{"cabin_class", "departure_date", "destination", "origin", "passengers"}
+	want := []string{"cabin_class", "departure_date", "destination", "origin", "passengers", "return_date", "round_trip"}
 	if !slices.Equal(got, want) {
 		t.Errorf("search_criteria keys = %v, want %v", got, want)
 	}

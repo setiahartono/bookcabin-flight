@@ -60,7 +60,7 @@ func TestLionAirSearchReturnsEveryRecordedFlight(t *testing.T) {
 		t.Fatalf("NewLionAir() error = %v", err)
 	}
 
-	flights, err := provider.Search(context.Background(), SearchRequest{})
+	flights, _, err := provider.Search(context.Background(), SearchRequest{})
 	if err != nil {
 		t.Fatalf("Search() error = %v", err)
 	}

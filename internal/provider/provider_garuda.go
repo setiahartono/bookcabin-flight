@@ -165,17 +165,17 @@ func pieceCount(pieces int) string {
 	return fmt.Sprintf("%d pieces", pieces)
 }
 
-func (g *Garuda) Search(ctx context.Context, _ SearchRequest) ([]FlightData, error) {
-	if err := g.wait(ctx, garudaMinDelay, garudaMaxDelay); err != nil {
-		return nil, err
-	}
+func (g *Garuda) Search(ctx context.Context, req SearchRequest) ([]FlightData, bool, error) {
+	return g.search(req, func() ([]FlightData, error) {
+		if err := g.wait(ctx, garudaMinDelay, garudaMaxDelay); err != nil {
+			return nil, err
+		}
 
-	var resp GarudaResponse
-	if err := g.decode(&resp); err != nil {
-		return nil, err
-	}
+		var resp GarudaResponse
+		if err := g.decode(&resp); err != nil {
+			return nil, err
+		}
 
-	flightData := g.Normalize(&resp)
-
-	return flightData, nil
+		return g.Normalize(&resp), nil
+	})
 }

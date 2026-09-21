@@ -80,14 +80,16 @@ func failureCount(err error) int {
 	return 1
 }
 
-func (s *SearchService) processFlightData(ctx context.Context, req provider.SearchRequest, criteria SearchCriteria) ([]provider.FlightData, error) {
-	flights, aggregateErr := s.aggregator.Aggregate(ctx, req)
+// processFlightData collects the flights of one leg and returns them ready to be
+// reported, together with whether the providers answered from the cache.
+func (s *SearchService) processFlightData(ctx context.Context, req provider.SearchRequest, criteria SearchCriteria) ([]provider.FlightData, bool, error) {
+	flights, cacheHit, aggregateErr := s.aggregator.Aggregate(ctx, req)
 
 	// Only the flights that match the criteria take part in the scoring
 	filtered := filter.FilterFlights(flights, criteria)
 	ranked := scoring.Rank(filtered)
 
-	return ranked, aggregateErr
+	return ranked, cacheHit, aggregateErr
 }
 
 func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (SearchResult, error) {
@@ -102,7 +104,9 @@ func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (Se
 		)
 	}
 
-	if isRoundTrip(criteria) && criteria.ReturnDate == "" {
+	roundTrip := isRoundTrip(criteria)
+
+	if roundTrip && criteria.ReturnDate == "" {
 		return SearchResult{}, fmt.Errorf(
 			"%w: returnDate is mandatory when roundTrip is true",
 			ErrInvalidCriteria,
@@ -122,6 +126,8 @@ func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (Se
 
 		rankedDeparture []provider.FlightData
 		rankedReturn    []provider.FlightData
+		departureCached bool
+		returnCached    bool
 		departureAggErr error
 		returnAggErr    error
 	)
@@ -130,11 +136,11 @@ func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (Se
 	go func() {
 		defer wg.Done()
 
-		rankedDeparture, departureAggErr =
+		rankedDeparture, departureCached, departureAggErr =
 			s.processFlightData(ctx, departureReq, criteria)
 	}()
 
-	if isRoundTrip(criteria) {
+	if roundTrip {
 		returnDate, err := time.Parse(time.DateOnly, criteria.ReturnDate)
 		if err != nil {
 			return SearchResult{}, fmt.Errorf(
@@ -160,23 +166,35 @@ func (s *SearchService) Search(ctx context.Context, criteria SearchCriteria) (Se
 		go func() {
 			defer wg.Done()
 
-			rankedReturn, returnAggErr =
+			rankedReturn, returnCached, returnAggErr =
 				s.processFlightData(ctx, returnReq, returnCriteria)
 		}()
 	}
 
 	wg.Wait()
 
+	// The way back asks every provider again, but those are the same providers: only
+	// the flights they answer with are counted twice.
+	totalResults := len(rankedDeparture) + len(rankedReturn)
+
+	// The search only counts as a cache hit when the providers of every leg it
+	// covered could answer from what they had kept.
+	cacheHit := departureCached
+	if roundTrip {
+		cacheHit = cacheHit && returnCached
+	}
+
 	result := SearchResult{
 		SearchCriteria: criteria,
 		Flights:        rankedDeparture,
 		ReturnFlights:  rankedReturn,
 		Metadata: metadata{
-			TotalResults:     len(rankedDeparture),
+			TotalResults:     totalResults,
 			ProvidersQueried: s.aggregator.Count(),
 			ProvidersFailed: failureCount(departureAggErr) +
 				failureCount(returnAggErr),
 			SearchTimeMs: int(time.Since(start).Milliseconds()),
+			CacheHit:     cacheHit,
 		},
 	}
 

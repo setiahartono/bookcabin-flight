@@ -76,7 +76,7 @@ func TestBatikAirNormalizeMapsRecordedFlights(t *testing.T) {
 		t.Fatalf("NewBatikAir() error = %v", err)
 	}
 
-	flights, err := b.Search(context.Background(), SearchRequest{})
+	flights, _, err := b.Search(context.Background(), SearchRequest{})
 	if err != nil {
 		t.Fatalf("Search() error = %v", err)
 	}
@@ -213,7 +213,7 @@ func TestBatikAirSearchHonoursContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	flights, err := b.Search(ctx, SearchRequest{})
+	flights, _, err := b.Search(ctx, SearchRequest{})
 
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("Search() error = %v, want context.Canceled", err)

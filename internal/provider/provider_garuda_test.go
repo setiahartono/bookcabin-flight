@@ -62,7 +62,7 @@ func TestGarudaSearchReturnsEveryRecordedFlight(t *testing.T) {
 		t.Fatalf("NewGaruda() error = %v", err)
 	}
 
-	flights, err := provider.Search(context.Background(), SearchRequest{})
+	flights, _, err := provider.Search(context.Background(), SearchRequest{})
 	if err != nil {
 		t.Fatalf("Search() error = %v", err)
 	}

@@ -118,21 +118,21 @@ func (a *AirAsia) Normalize(resp *AirAsiaResponse) []FlightData {
 	return flights
 }
 
-func (a *AirAsia) Search(ctx context.Context, _ SearchRequest) ([]FlightData, error) {
-	if err := a.wait(ctx, airAsiaMinDelay, airAsiaMaxDelay); err != nil {
-		return nil, err
-	}
+func (a *AirAsia) Search(ctx context.Context, req SearchRequest) ([]FlightData, bool, error) {
+	return a.search(req, func() ([]FlightData, error) {
+		if err := a.wait(ctx, airAsiaMinDelay, airAsiaMaxDelay); err != nil {
+			return nil, err
+		}
 
-	if err := a.maybeFail(airAsiaSuccessRate); err != nil {
-		return nil, err
-	}
+		if err := a.maybeFail(airAsiaSuccessRate); err != nil {
+			return nil, err
+		}
 
-	var resp AirAsiaResponse
-	if err := a.decode(&resp); err != nil {
-		return nil, err
-	}
+		var resp AirAsiaResponse
+		if err := a.decode(&resp); err != nil {
+			return nil, err
+		}
 
-	flightData := a.Normalize(&resp)
-
-	return flightData, nil
+		return a.Normalize(&resp), nil
+	})
 }
